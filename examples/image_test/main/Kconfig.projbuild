@@ -1,0 +1,30 @@
+menu "Example Configuration"
+
+    config AP_SSID
+        string "AP SSID"
+        default "AP_SSID"
+        help
+            Access point SSID.
+
+    config AP_PASSWD
+        string "AP password"
+        default "AP_PASSWD"
+        help
+            Access point password.
+
+    config MQTT_BROKER_URI
+        string "MQTT broker URI"
+        help
+            MQTT broker URI.
+
+    config MQTT_USERNAME
+        string "MQTT username"
+        help
+            MQTT username for authentication.
+
+    config MQTT_PASSWORD
+        string "MQTT password"
+        help
+            MQTT password for authentication.
+
+endmenu

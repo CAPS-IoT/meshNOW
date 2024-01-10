@@ -1,0 +1,21 @@
+menu "Example Configuration"
+
+    config EXAMPLE_ROUTER_SSID
+        string "Router SSID"
+        default "myssid"
+        help
+            SSID (network name) for the example to connect to.
+
+    config EXAMPLE_ROUTER_PASSWORD
+        string "Router Password"
+        default "mypassword"
+        help
+            Router password for the example to use.
+
+    config EXAMPLE_MQTT_BROKER_URI
+        string "MQTT Broker URI"
+        default "mqtt://test.mosquitto.org:1883"
+        help
+            URI of the MQTT broker to connect to.
+
+endmenu

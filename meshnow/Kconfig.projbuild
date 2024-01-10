@@ -1,0 +1,86 @@
+menu "MeshNOW Customization"
+
+    config MAX_CHILDREN
+        int "Maximum number of children"
+        default 5
+        help
+            Determines the maximum number of children that a node can have.
+            If a node has reached the maximum number of children, it will not accept new children.
+            Lowering this value can save memory, but complicate node deployment.
+
+    config SEARCH_PROBE_INTERVAL
+        int "Search probe interval (ms)"
+        default 50
+        help
+            Time in milliseconds until the next search probe is sent during the search phase.
+            A smaller value will result in a faster connection, but will also increase network congestion and power consumption.
+
+    config PROBES_PER_CHANNEL
+        int "Number of search probes per channel"
+        default 3
+        help
+            During the search phase, the node performs an all-channel scan as the home channel of any potential parent node is unknown.
+            This value determines the number of search probes that are sent on each channel.
+            A smaller value may result in failing to accept a connection because the channel is switched before a reply is received.
+            A larger value may increase the time it takes to connect as the node stays longer on dead channels.
+
+    config FIRST_PARENT_WAIT
+        int "First parent wait time (ms)"
+        default 3000
+        help
+            During the search phase, after a first potential parent was found, the node keeps searching for more parents in case an even better parent is found.
+            This value determines the time in milliseconds that the node keeps searching for more parents after the first one was found.
+            Set to 0 to disable this feature.
+
+    config MAX_PARENTS_TO_CONSIDER
+        int "Maximum number of parents to consider during search"
+        default 5
+        help
+            During the search phase, the node keeps track of only a few parents at a time to save memory and speed up the connection process.
+            This value determines the maximum number of parents that the node keeps track of. If a better parent is found, the node will replace the worst parent it is tracking.
+
+    config CONNECT_TIMEOUT
+        int "Connection timeout (ms)"
+        default 3000
+        help
+            During the connect phase, the node sends a connect request to the best parent and waits for a reply.
+            This value determines the time in milliseconds that the node waits for a reply before trying to connect to the next best parent.
+
+    config STATUS_SEND_INTERVAL
+        int "Status send interval (ms)"
+        default 500
+        help
+            A node sends a special status beacon to each of its neighbors at regular intervals.
+            This value determines the time in milliseconds between two status beacons.
+            The value should best be smaller than CONFIG_KEEP_ALIVE_TIMEOUT to prevent false disconnects.
+
+    config KEEP_ALIVE_TIMEOUT
+        int "Keep alive timeout (ms)"
+        default 3000
+        help
+            A node considers a neighbor to be disconnected if it has not received a status beacon from it for a certain time.
+            This value determines the time in milliseconds after which a neighbor is considered to be disconnected.
+            The value should best be larger than CONFIG_STATUS_SEND_INTERVAL to prevent false disconnects.
+
+    config ROOT_UNREACHABLE_TIMEOUT
+        int "Root unreachable timeout (ms)"
+        default 10000
+        help
+            If a node disconnects from its parent, all its (indirect) children will stay connected.
+            After this timeout value in milliseconds, the nodes will disconnect and search for new parents as they cannot reach the root node anymore.
+
+    config FRAGMENT_TIMEOUT
+        int "Fragment timeout (ms)"
+        default 3000
+        help
+            TCP/IP packets need to be fragmented by MeshNOW to fit into the ESP-NOW payload size limit.
+            This value determines the time in milliseconds that MeshNOW waits for another fragment of the same TCP/IP packet to be received before completely discarding it.
+            A smaller value will lead to less memory usage, but may result in higher retransmission counts and therefore higher network congestion.
+
+    config STATIC_DNS_ADDR
+        hex "Static DNS address"
+        default 0x01010101
+        help
+            The IP address of the DNS server that is used for DNS lookups. This value is encoded as a 4-byte hex value.
+
+endmenu

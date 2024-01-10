@@ -1,0 +1,34 @@
+# Only non-default configurations are listed
+
+PROJECT_NAME    = "MeshNOW"
+PROJECT_BRIEF   = "Sensor Mesh Networks using ESP-NOW technology"
+
+# The INPUT tag is used to specify the header files that we want to include
+
+INPUT = \
+    $(PROJECT_PATH)/meshnow/src/include/meshnow.h
+
+# Get warnings for functions that have no documentation for their parameters or return value
+WARN_NO_PARAMDOC = YES
+
+# Enable preprocessing, replace certain things
+ENABLE_PREPROCESSING    = YES
+MACRO_EXPANSION         = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = \
+    $(ENV_DOXYGEN_DEFINES) \
+    "ESP_EVENT_DECLARE_BASE(x)=extern esp_event_base_t x"
+
+# Do not complain about not having dot
+HAVE_DOT = NO
+
+# Generate only XML. It's required by Breathe
+GENERATE_XML    = YES
+XML_OUTPUT      = XML
+GENERATE_HTML   = NO
+GENERATE_LATEX  = NO
+GENERATE_MAN    = NO
+GENERATE_RTF    = NO
+
+# Skip progress messages
+QUIET = NO

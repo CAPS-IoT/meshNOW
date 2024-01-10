@@ -1,0 +1,8 @@
+.simple dt:has(strong) {
+    margin-bottom: 6px;
+    border: none;
+    border-left: 3px solid #ccc;
+    background: #f0f0f0;
+    color: #555;
+    padding: 3px 6px;
+}

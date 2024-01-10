@@ -30,3 +30,21 @@
 *.exe
 *.out
 *.app
+
+# Build output
+build
+cmake-*
+
+# sdkconfig
+sdkconfig
+sdkconfig.old
+
+# VS Code Settings
+.vscode
+
+# IntelliJ
+.idea
+
+# IDF Component Manager
+managed_components
+dependencies.lock
