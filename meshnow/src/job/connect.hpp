@@ -74,7 +74,7 @@ class ConnectJob : public Job {
         /**
          * How many search probes have been sent on the current channel.
          */
-        uint search_probes_sent_{0};
+        unsigned int search_probes_sent_{0};
 
         /**
          * The current channel we are searching on.
