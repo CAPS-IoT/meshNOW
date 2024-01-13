@@ -2,6 +2,7 @@
 
 #include <esp_log.h>
 
+#include <algorithm>
 #include <lock.hpp>
 
 #include "custom.hpp"

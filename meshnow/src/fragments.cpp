@@ -5,6 +5,7 @@
 #include <freertos/portmacro.h>
 #include <freertos/task.h>
 
+#include <algorithm>
 #include <map>
 
 #include "constants.hpp"

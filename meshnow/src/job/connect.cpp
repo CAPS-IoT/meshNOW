@@ -5,6 +5,8 @@
 #include <nvs_flash.h>
 #include <sdkconfig.h>
 
+#include <algorithm>
+
 #include "layout.hpp"
 #include "lock.hpp"
 #include "meshnow.h"

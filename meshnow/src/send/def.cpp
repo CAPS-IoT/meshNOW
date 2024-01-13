@@ -1,5 +1,7 @@
 #include "def.hpp"
 
+#include <algorithm>
+
 #include "layout.hpp"
 
 namespace meshnow::send {
