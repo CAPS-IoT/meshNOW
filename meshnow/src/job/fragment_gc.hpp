@@ -1,5 +1,6 @@
 #pragma once
 
+#include "freertos/FreeRTOS.h"
 #include "job.hpp"
 
 namespace meshnow::job {
