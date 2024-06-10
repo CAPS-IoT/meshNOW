@@ -2,7 +2,9 @@
 
 #include <esp_log.h>
 #include <freertos/FreeRTOS.h>
+#if IDF_VERSION_MAJOR >= 5 && IDF_VERSION_MINOR < 1
 #include <freertos/portmacro.h>
+#endif
 #include <freertos/task.h>
 
 #include <algorithm>

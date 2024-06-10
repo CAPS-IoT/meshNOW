@@ -4,7 +4,11 @@
 
 #include "connect.hpp"
 #include "fragment_gc.hpp"
-#include "freertos/portmacro.h"
+#if IDF_VERSION_MAJOR >= 5 && IDF_VERSION_MINOR < 1
+#include <freertos/portmacro.h>
+#else
+#include "freertos/FreeRTOS.h"
+#endif
 #include "job.hpp"
 #include "keep_alive.hpp"
 #include "lock.hpp"

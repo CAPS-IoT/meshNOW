@@ -1,7 +1,11 @@
 #pragma once
 
-#include <esp_err.h>
+#if IDF_VERSION_MAJOR >= 5 && IDF_VERSION_MINOR < 1
 #include <freertos/portmacro.h>
+#else
+#include "freertos/FreeRTOS.h"
+#endif
+#include <esp_err.h>
 
 #include <optional>
 #include <utility>
