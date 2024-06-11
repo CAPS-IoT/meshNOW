@@ -140,12 +140,12 @@ typedef void* meshnow_data_cb_handle_t;
 /**
  * Broadcast address.
  */
-const meshnow_addr_t MESHNOW_BROADCAST_ADDRESS = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+static const meshnow_addr_t MESHNOW_BROADCAST_ADDRESS = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 /**
  * Root address.
  */
-const meshnow_addr_t MESHNOW_ROOT_ADDRESS = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+static const meshnow_addr_t MESHNOW_ROOT_ADDRESS = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
 /**
  * Initialize MeshNOW.
