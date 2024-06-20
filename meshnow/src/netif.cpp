@@ -145,7 +145,7 @@ void NowNetif::start() {
     ESP_LOGI(TAG, "Starting network interface");
     esp_netif_action_start(netif_.get(), nullptr, 0, nullptr);
     ESP_ERROR_CHECK(io_receive_task_handle.init(
-        util::TaskSettings("io_receive", 2048, TASK_PRIORITY, util::CPU::PRO_CPU), [&] { io_receive_task(); }));
+        util::TaskSettings("io_receive", 4096, TASK_PRIORITY, util::CPU::PRO_CPU), [&] { io_receive_task(); }));
 
     if (state::isRoot()) {
         // enable network address port translation AFTER starting the netif
