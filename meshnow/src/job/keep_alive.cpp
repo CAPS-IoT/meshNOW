@@ -149,6 +149,16 @@ void NeighborCheckJob::performAction() {
         if (now - it->last_seen > KEEP_ALIVE_TIMEOUT) {
             auto mac = it->mac;
             ESP_LOGW(TAG, "Direct child " MACSTR " timed out", MAC2STR(mac));
+
+            // fire disconnect event
+            {
+                meshnow_event_child_disconnected_t child_disconnected_event;
+                util::MacAddr& parent_mac = layout::Layout::get().getParent().mac;
+                std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), child_disconnected_event.child_mac);
+                esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_DISCONNECTED,
+                               &child_disconnected_event, sizeof(child_disconnected_event), portMAX_DELAY);
+            }
+
             layout.removeChild(it->mac);
             // send event upstream
             sendChildDisconnected(mac);

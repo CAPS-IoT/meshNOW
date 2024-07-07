@@ -178,6 +178,14 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectRequest& 
 
     ESP_LOGI(TAG, "Child " MACSTR " connected", MAC2STR(meta.from));
 
+    // fire connect event
+    {
+        meshnow_event_child_connected_t child_connected_event;
+        std::copy(meta.from.addr.begin(), meta.from.addr.end(), child_connected_event.child_mac);
+        esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_CONNECTED, &child_connected_event,
+                       sizeof(child_connected_event), portMAX_DELAY);
+    }
+
     // send reply
     ESP_LOGV(TAG, "Sending Connect Response");
     send::enqueuePayload(packets::ConnectOk{state::getRootMac()}, send::DirectOnce(meta.from));
