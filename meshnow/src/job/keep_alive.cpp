@@ -153,8 +153,7 @@ void NeighborCheckJob::performAction() {
             // fire disconnect event
             {
                 meshnow_event_child_disconnected_t child_disconnected_event;
-                util::MacAddr& parent_mac = layout::Layout::get().getParent().mac;
-                std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), child_disconnected_event.child_mac);
+                std::copy(mac.addr.begin(), mac.addr.end(), child_disconnected_event.child_mac);
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_DISCONNECTED,
                                &child_disconnected_event, sizeof(child_disconnected_event), portMAX_DELAY);
             }
