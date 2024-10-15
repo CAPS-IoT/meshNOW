@@ -31,6 +31,30 @@ void PacketHandler::handlePacket(const util::MacAddr& from, int rssi, const pack
 
     auto& payload = packet.payload;
 
+    // dynamiclly update routing table
+    if (layout::Layout::get().hasChild(from)) {
+        auto& child = layout::Layout::get().getChild(from);
+        for (const auto& entry : child.routing_table) {
+            if (entry.mac == packet.from) goto routing_table_done;
+        }
+
+        // child does not know sender, add to routing table
+        child.routing_table.emplace_back(packet.from);
+
+        // check if sender is part of routing table of other children
+        // if so, remove from their routing table
+        for (auto& other_child : layout::Layout::get().getChildren()) {
+            if (other_child.mac == from) continue;
+
+            auto& routing_table = other_child.routing_table;
+            routing_table.erase(std::remove_if(routing_table.begin(), routing_table.end(),
+                                               [&](const auto& entry) { return entry.mac == packet.from; }),
+                                routing_table.end());
+        }
+    }
+
+routing_table_done:
+
     // forward if not designated to this node
     if (!isForMe(packet)) {
         send::enqueuePayload(packet.payload, send::FullyResolve(packet.from, packet.to, from), packet.id);
@@ -214,6 +238,11 @@ void PacketHandler::handle(const MetaData& meta, const packets::RoutingTableAdd&
     // get child matching last hop
     auto& child = layout().getChild(meta.last_hop);
     child.routing_table.emplace_back(p.entry);
+
+    // forward to parent
+    // if (!layout().hasParent()) return;
+    // send::enqueuePayload(packets::RoutingTableAdd{p.entry},
+    //                      send::UpstreamRetry{});
 }
 
 void PacketHandler::handle(const MetaData& meta, const packets::RoutingTableRemove& p) {
@@ -224,6 +253,10 @@ void PacketHandler::handle(const MetaData& meta, const packets::RoutingTableRemo
     auto& child = layout().getChild(meta.last_hop);
     std::remove_if(child.routing_table.begin(), child.routing_table.end(),
                    [&](const auto& item) { return item.mac == p.entry; });
+
+    // forward to parent
+    if (!layout().hasParent()) return;
+    send::enqueuePayload(packets::RoutingTableRemove{p.entry}, send::UpstreamRetry{});
 }
 
 void PacketHandler::handle(const MetaData& meta, const packets::RootUnreachable& p) {
