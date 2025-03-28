@@ -8,7 +8,8 @@
 
 static constexpr auto QUEUE_TIMEOUT{pdMS_TO_TICKS(100)};
 static constexpr auto QUEUE_SIZE{128};
-// TODO QUEUE_SIZE has to be higher so not to get deadlocks! FIND A REAL SOLUTION!
+// TODO QUEUE_SIZE has to be higher so not to get deadlocks! FIND A REAL
+// SOLUTION!
 
 namespace meshnow::send {
 
@@ -18,12 +19,13 @@ esp_err_t init() { return queue.init(QUEUE_SIZE); }
 
 void deinit() { queue = util::Queue<Item>{}; }
 
-void enqueuePayload(const packets::Payload& payload, SendBehavior behavior, uint32_t id) {
-    queue.push_back(Item{payload, std::move(behavior), id}, QUEUE_TIMEOUT);
+void enqueuePayload(const packets::Payload& payload, SendBehavior behavior,
+                    uint32_t id) {
+  queue.push_back(Item{payload, std::move(behavior), id}, QUEUE_TIMEOUT);
 }
 
 void enqueuePayload(const packets::Payload& payload, SendBehavior behavior) {
-    enqueuePayload(payload, std::move(behavior), esp_random());
+  enqueuePayload(payload, std::move(behavior), esp_random());
 }
 
 std::optional<Item> popItem(TickType_t timeout) { return queue.pop(timeout); }
