@@ -42,36 +42,36 @@ void PacketHandler::handlePacket(const util::MacAddr& from, int rssi,
 
   auto& payload = packet.payload;
 
-  printf("Packet: " MACSTR " -> " MACSTR "(hop: " MACSTR ")",
-         MAC2STR(packet.from), MAC2STR(packet.to), MAC2STR(from));
+  // printf("Packet: " MACSTR " -> " MACSTR "(hop: " MACSTR ")",
+  //        MAC2STR(packet.from), MAC2STR(packet.to), MAC2STR(from));
 
-  std::visit(
-      overloaded{
-          [](const packets::Status& p) { printf(" - Status"); },
-          [](const packets::SearchProbe& p) { printf(" - SearchProbe"); },
-          [](const packets::SearchReply& p) { printf(" - SearchReply"); },
-          [](const packets::ConnectRequest& p) { printf(" - ConnectRequest"); },
-          [](const packets::ConnectOk& p) { printf(" - ConnectOk\n"); },
-          [](const packets::RoutingTableAdd& p) {
-            printf(" - RoutingTableAdd");
-          },
-          [](const packets::RoutingTableRemove& p) {
-            printf(" - RoutingTableRemove");
-          },
-          [](const packets::RootUnreachable& p) {
-            printf(" - RootUnreachable");
-          },
-          [](const packets::RootReachable& p) { printf(" - RootReachable"); },
-          [](const packets::DataFragment& p) { printf(" - DataFragment"); },
-          [](const packets::CustomData& p) { printf(" - CustomData"); },
-      },
-      payload);
+  // std::visit(
+  //     overloaded{
+  //         [](const packets::Status& p) { printf(" - Status"); },
+  //         [](const packets::SearchProbe& p) { printf(" - SearchProbe"); },
+  //         [](const packets::SearchReply& p) { printf(" - SearchReply"); },
+  //         [](const packets::ConnectRequest& p) { printf(" - ConnectRequest"); },
+  //         [](const packets::ConnectOk& p) { printf(" - ConnectOk\n"); },
+  //         [](const packets::RoutingTableAdd& p) {
+  //           printf(" - RoutingTableAdd");
+  //         },
+  //         [](const packets::RoutingTableRemove& p) {
+  //           printf(" - RoutingTableRemove");
+  //         },
+  //         [](const packets::RootUnreachable& p) {
+  //           printf(" - RootUnreachable");
+  //         },
+  //         [](const packets::RootReachable& p) { printf(" - RootReachable"); },
+  //         [](const packets::DataFragment& p) { printf(" - DataFragment"); },
+  //         [](const packets::CustomData& p) { printf(" - CustomData"); },
+  //     },
+  //     payload);
 
-  if (isForMe(packet)) {
-    printf(" - For me\n");
-  } else {
-    printf(" - Not for me\n");
-  }
+  // if (isForMe(packet)) {
+  //   printf(" - For me\n");
+  // } else {
+  //   printf(" - Not for me\n");
+  // }
 
   // dynamiclly update routing table
   if (layout::Layout::get().hasChild(from)) {
