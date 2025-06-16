@@ -54,7 +54,7 @@ esp_err_t Networking::start() {
     stop_tasks_ = false;
 
     constexpr auto priority = TASK_PRIORITY;
-    constexpr auto cpu = util::CPU::PRO_CPU;
+    constexpr auto cpu = util::CPU::APP_CPU;
 
     // TODO adapt stack size, right now it is ridiculously high but works
 
