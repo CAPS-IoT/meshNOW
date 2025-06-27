@@ -247,6 +247,7 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
     }
 
     current_parent_mac_ = it->mac_addr;
+    current_parent_rssi_ = it->rssi;
     job.parent_infos_.erase(it);
 
     awaiting_connect_response_ = true;
@@ -282,6 +283,8 @@ void ConnectJob::ConnectPhase::event_handler(ConnectJob &job, event::InternalEve
     // fire connect event
     {
         meshnow_event_parent_connected_t parent_connected_event;
+        // printf("Connection strength is %d\n", current_parent_rssi_);
+        parent_connected_event.parent_rssi = current_parent_rssi_;
         std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_connected_event.parent_mac);
         esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_CONNECTED, &parent_connected_event,
                        sizeof(parent_connected_event), portMAX_DELAY);

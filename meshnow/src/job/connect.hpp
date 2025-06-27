@@ -118,6 +118,7 @@ class ConnectJob : public Job {
          * The MAC address of the parent we are currently trying to connect to.
          */
         util::MacAddr current_parent_mac_;
+        int current_parent_rssi_ = -128;
     };
 
     /**

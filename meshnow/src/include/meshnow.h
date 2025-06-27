@@ -77,6 +77,8 @@ typedef struct {
      * MAC address of the parent to which this node connected.
      */
     meshnow_addr_t parent_mac;
+    int parent_rssi;
+    
 } meshnow_event_parent_connected_t;
 
 /**
