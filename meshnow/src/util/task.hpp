@@ -87,8 +87,8 @@ class Task {
                 break;
         }
 
-        if (xTaskCreatePinnedToCore(&taskFunction<Fn, Args...>, settings.name, settings.stack_size, params,
-                                    settings.priority, &handle, affinity) == pdPASS) {
+        if (xTaskCreate(&taskFunction<Fn, Args...>, settings.name, settings.stack_size, params,
+                                    settings.priority, &handle) == pdPASS) {
             // save task handle
             task_handle_.reset(handle);
             return ESP_OK;
