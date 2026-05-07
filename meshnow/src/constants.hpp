@@ -14,6 +14,6 @@ constexpr auto MAX_FRAG_PAYLOAD_SIZE{ESP_NOW_MAX_DATA_LEN - HEADER_SIZE - 6};
 constexpr auto MAX_CUSTOM_PAYLOAD_SIZE{ESP_NOW_MAX_DATA_LEN - HEADER_SIZE};
 
 // TASKS
-constexpr auto TASK_PRIORITY{23};
+constexpr auto TASK_PRIORITY{5};
 
 }  // namespace meshnow
