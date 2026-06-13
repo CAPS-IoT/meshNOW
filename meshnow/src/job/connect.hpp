@@ -94,31 +94,41 @@ class ConnectJob : public Job {
 
        private:
         /**
-         * Sends a connect request to a potential parent.
-         * @param to_mac MAC address of the parent
-         */
-        static void sendConnectRequest(const util::MacAddr& to_mac);
-
-        /**
          * If this phase just been started.
          */
         bool started_{false};
+    };
 
-        /**
-         * Ticks since the last connect request was sent.
-         */
-        TickType_t last_connect_request_time_{0};
+    class AwaitingConnectResponsePhase {
+       public:
+        AwaitingConnectResponsePhase(const TickType_t request_sent_tick, util::MacAddr current_parent_mac,
+                                     int current_parent_rssi)
+            : request_sent_tick_(request_sent_tick),
+              current_parent_mac_(current_parent_mac),
+              current_parent_rssi_(current_parent_rssi) {}
 
+        TickType_t nextActionAt() const noexcept;
+        void performAction(ConnectJob &job);
+
+        void event_handler(ConnectJob &job, event::InternalEvent event, void *event_data);
+
+       private:
         /**
-         * If currently awaiting a connect response.
+         * Ticks since the connect request was sent.
          */
-        bool awaiting_connect_response_{false};
+        TickType_t request_sent_tick_;
 
         /**
          * The MAC address of the parent we are currently trying to connect to.
          */
         util::MacAddr current_parent_mac_;
+
         int current_parent_rssi_ = -128;
+
+        /**
+         * If this phase just been started.
+         */
+        bool started_{false};
     };
 
     /**
@@ -138,7 +148,7 @@ class ConnectJob : public Job {
         bool started_{false};
     };
 
-    using Phase = std::variant<SearchPhase, ConnectPhase, DonePhase>;
+    using Phase = std::variant<SearchPhase, ConnectPhase, AwaitingConnectResponsePhase, DonePhase>;
 
     static void event_handler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
