@@ -214,7 +214,12 @@ void ConnectJob::SearchPhase::writeChannelToNVS(uint8_t channel) {
 
 // CONNECT PHASE //
 
-TickType_t ConnectJob::ConnectPhase::nextActionAt() const noexcept { return 0; }
+TickType_t ConnectJob::ConnectPhase::nextActionAt() const noexcept {
+    if (started_) {
+        return portMAX_DELAY;
+    }
+    return 0;
+}
 
 void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
     if (!started_) {
