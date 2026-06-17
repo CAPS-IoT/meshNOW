@@ -233,11 +233,11 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
         return;
     }
 
-    job.parent_infos_.erase(it);
-
     ESP_LOGI(TAG, "Sending connect request to " MACSTR, MAC2STR(it->mac_addr));
     send::enqueuePayload(packets::ConnectRequest{}, send::DirectOnce(it->mac_addr));
     job.phase_ = AwaitingConnectResponsePhase(xTaskGetTickCount(), it->mac_addr, it->rssi);
+
+    job.parent_infos_.erase(it);
 }
 
 void ConnectJob::ConnectPhase::event_handler(ConnectJob &job, event::InternalEvent event, void *event_data) {}
