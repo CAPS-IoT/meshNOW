@@ -31,6 +31,7 @@ struct ParentFoundData {
 struct GotConnectResponseData {
     const util::MacAddr parent;
     const util::MacAddr root;
+    const int rssi;
 };
 
 class Internal {

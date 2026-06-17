@@ -99,13 +99,14 @@ class ConnectJob : public Job {
         bool started_{false};
     };
 
+    enum class RequestOrigin : uint8_t { INITIAL = 0, RECONNECT = 1 };
+
     class AwaitingConnectResponsePhase {
        public:
-        AwaitingConnectResponsePhase(const TickType_t request_sent_tick, util::MacAddr current_parent_mac,
-                                     int current_parent_rssi)
+        AwaitingConnectResponsePhase(const TickType_t request_sent_tick, util::MacAddr current_parent_mac, RequestOrigin origin)
             : request_sent_tick_(request_sent_tick),
               current_parent_mac_(current_parent_mac),
-              current_parent_rssi_(current_parent_rssi) {}
+              origin_(origin){}
 
         TickType_t nextActionAt() const noexcept;
         void performAction(ConnectJob &job);
@@ -123,12 +124,39 @@ class ConnectJob : public Job {
          */
         util::MacAddr current_parent_mac_;
 
-        int current_parent_rssi_ = -128;
-
         /**
          * If this phase just been started.
          */
         bool started_{false};
+
+        /**
+         * Used to determine which phase to revert to in the event of a timeout.
+         */
+        RequestOrigin origin_;
+    };
+    
+
+    /**
+     * Reconnect phase, used when attempting to re-establish connection with a previously connected parent.
+     */
+    
+    class ReconnectPhase {
+       public:
+        ReconnectPhase(const util::MacAddr& parent_mac) : current_parent_mac_(parent_mac) {}
+        TickType_t nextActionAt() const noexcept;
+        void performAction(ConnectJob &job);
+        void event_handler(ConnectJob& job, event::InternalEvent event, void* event_data);
+
+       private:
+        /**
+         * If this phase just been started.
+         */
+        bool started_{false};
+
+         /**
+         * The MAC address of the parent we are currently trying to connect to.
+         */
+        util::MacAddr current_parent_mac_;
     };
 
     /**
@@ -136,6 +164,8 @@ class ConnectJob : public Job {
      */
     class DonePhase {
        public:
+       DonePhase(const util::MacAddr& parent_mac) 
+            : current_parent_mac_(parent_mac) {}
         TickType_t nextActionAt() const noexcept;
         void performAction(ConnectJob& job);
 
@@ -146,9 +176,13 @@ class ConnectJob : public Job {
          * If this phase just been started.
          */
         bool started_{false};
+        /**
+         * The MAC address of the parent we are currently trying to connect to.
+         */
+        util::MacAddr current_parent_mac_;
     };
 
-    using Phase = std::variant<SearchPhase, ConnectPhase, AwaitingConnectResponsePhase, DonePhase>;
+    using Phase = std::variant<SearchPhase, ConnectPhase, ReconnectPhase, AwaitingConnectResponsePhase, DonePhase>;
 
     static void event_handler(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
@@ -159,6 +193,8 @@ class ConnectJob : public Job {
     std::vector<ParentInfo> parent_infos_;
     // starts per default with SearchPhase
     Phase phase_{SearchPhase{channel_config_}};
+    // number of reconnect attempts made in the current reconnect phase
+    uint8_t reconnect_attempts_{0};
 };
 
 }  // namespace meshnow::job
