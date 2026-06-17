@@ -16,6 +16,8 @@ void deinit() { queue = util::Queue<Item>{}; }
 
 void push(Item&& item) { queue.push_back(std::move(item), QUEUE_TIMEOUT); }
 
+void push_front(Item&& item) { queue.push_front(std::move(item), QUEUE_TIMEOUT); }
+
 std::optional<Item> pop(TickType_t timeout) { return queue.pop(timeout); }
 
 }  // namespace meshnow::receive

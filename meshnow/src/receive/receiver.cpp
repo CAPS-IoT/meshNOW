@@ -1,6 +1,7 @@
 #include "receiver.hpp"
 
 #include <esp_log.h>
+#include <utility>
 
 #include "packets.hpp"
 #include "queue.hpp"
@@ -32,8 +33,13 @@ void Receiver::receiveCallback(const esp_now_recv_info_t *esp_now_info, const ui
         std::move(*packet),
     };
 
-    // push item to queue
-    push(std::move(item));
+    if (std::holds_alternative<packets::Status>(item.packet.payload)) {
+        // prioritary message : push item to the front of the queue
+        push_front(std::move(item));
+    } else {
+        // not a prioritary message : push item to the end of the queue
+        push(std::move(item));
+    }
 }
 
 }  // namespace meshnow::receive

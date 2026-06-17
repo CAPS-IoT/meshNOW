@@ -42,6 +42,13 @@ void deinit();
 void push(Item&& item);
 
 /**
+ * Pushed a new item to to top of the receive queue
+ *
+ * @param Item Item to push
+ */
+void push_front(Item&& item);
+
+/**
  * Pops an item from the receive queue.
  *
  * @param item Item to pop.
