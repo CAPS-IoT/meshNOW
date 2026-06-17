@@ -23,6 +23,12 @@ struct Item {
     int rssi;
     packets::Packet packet;
 };
+/**
+ * A type defintion to represent priority level
+ *
+ * HIGHER is BETTER
+ */
+typedef std::size_t p_level;
 
 /**
  * Initializes receive queue.
@@ -38,22 +44,32 @@ void deinit();
  * Pushes a new item to the receive queue.
  *
  * @param item Item to push.
+ *
+ * @warning the pushed the item with the least
+ * priority
  */
 void push(Item&& item);
 
 /**
- * Pushed a new item to to top of the receive queue
+ * Pushes a new item at a certain priority level
  *
- * @param Item Item to push
+ * @param item Item to push
+ * @param level Priority level of the item
  */
-void push_front(Item&& item);
-
+void push(Item&& item, p_level level);
 /**
  * Pops an item from the receive queue.
  *
  * @param item Item to pop.
  * @param timeout Timeout in ticks.
+ *
+ * @note When the queue has some non-trivial
+ * priorities, this function fetches the 
+ * highest-priority element. 
+ * To prevent items with low priority to stay
+ * in the queue for ever, a mechanism is set so
+ * that once in a while low priority elements get
+ * fetched.
  */
 std::optional<Item> pop(TickType_t timeout);
-
 }  // namespace meshnow::receive

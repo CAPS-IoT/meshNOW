@@ -35,7 +35,7 @@ void Receiver::receiveCallback(const esp_now_recv_info_t *esp_now_info, const ui
 
     if (std::holds_alternative<packets::Status>(item.packet.payload)) {
         // prioritary message : push item to the front of the queue
-        push_front(std::move(item));
+        push(std::move(item), 10);
     } else {
         // not a prioritary message : push item to the end of the queue
         push(std::move(item));
