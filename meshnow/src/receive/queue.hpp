@@ -45,7 +45,7 @@ void deinit();
  *
  * @param item Item to push.
  *
- * @warning the pushed the item with the least
+ * @warning the pushed the item with the highest
  * priority
  */
 void push(Item&& item);

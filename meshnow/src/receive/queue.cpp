@@ -4,8 +4,8 @@
 #include "util/queue.hpp"
 
 static constexpr auto QUEUE_TIMEOUT{pdMS_TO_TICKS(100)};
-static constexpr std::size_t PRIORITY_LEVELS{3};
-static constexpr std::size_t PEOPLE_PER_LEVEL{2};
+static constexpr std::size_t PRIORITY_LEVELS{CONFIG_RECEIVER_PRIORITY_QUEUE_LEVELS};
+static constexpr std::size_t PEOPLE_PER_LEVEL{CONFIG_MESSAGES_PER_PRIORITY_LEVEL};
 static constexpr auto QUEUE_SIZE{128};
 // TODO QUEUE_SIZE has to be higher so not to get deadlocks! FIND A REAL SOLUTION!
 
@@ -32,7 +32,7 @@ void deinit() {
     }
 }
 
-void push(Item&& item) { priority_queues[0].push_back(std::move(item), QUEUE_TIMEOUT); }
+void push(Item&& item) { priority_queues[PRIORITY_LEVELS-1].push_back(std::move(item), QUEUE_TIMEOUT); }
 
 void push(Item&& item, p_level level) {
     if (level < PRIORITY_LEVELS) {
