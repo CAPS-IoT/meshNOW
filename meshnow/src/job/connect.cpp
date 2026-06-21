@@ -291,9 +291,9 @@ void ConnectJob::AwaitingConnectResponsePhase::performAction(ConnectJob &job) {
     if (started_) return;
 
     started_ = true;
-    ESP_LOGI(TAG, "Connect response timeout fired, retrying with next parent");
-    event::Internal::fire(event::InternalEvent::TIMEOUT_CONNECT_RESPONSE, NULL, 0);
-}
+    ESP_LOGI(TAG, "Connect response timeout fired (%s)",
+             origin_ == RequestOrigin::INITIAL ? "connect" : "reconnect");
+    event::Internal::fire(event::InternalEvent::TIMEOUT_CONNECT_RESPONSE, nullptr, 0);
 
 void ConnectJob::AwaitingConnectResponsePhase::event_handler(ConnectJob &job, event::InternalEvent event,
                                                              void *event_data) {
