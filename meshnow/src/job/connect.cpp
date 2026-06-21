@@ -341,6 +341,7 @@ void ConnectJob::AwaitingConnectResponsePhase::event_handler(ConnectJob &job, ev
             parent.last_seen = xTaskGetTickCount();
 
             // we now want to perform the reset
+            job.reconnect_attempts_ = 0;
             job.phase_ = DonePhase{current_parent_mac_};
             break;
         }
