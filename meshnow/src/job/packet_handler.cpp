@@ -282,7 +282,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectEnd&) {
 
     auto& layout = layout::Layout::get();
 
-    if (isParent(meta.last_hop)) {
+    if (isParent(meta.from)) {
         ESP_LOGI(TAG, "Parent " MACSTR " ended connection", MAC2STR(meta.last_hop));
 
         {
@@ -298,17 +298,17 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectEnd&) {
         return;
     }
 
-    if (isChild(meta.last_hop)) {
-        ESP_LOGI(TAG, "Child " MACSTR " ended connection", MAC2STR(meta.last_hop));
+    if (isChild(meta.from)) {
+        ESP_LOGI(TAG, "Child " MACSTR " ended connection", MAC2STR(meta.from));
 
         {
             meshnow_event_child_disconnected_t child_disconnected_event;
-            std::copy(meta.last_hop.addr.begin(), meta.last_hop.addr.end(), child_disconnected_event.child_mac);
+            std::copy(meta.from.addr.begin(), meta.from.addr.end(), child_disconnected_event.child_mac);
             esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_DISCONNECTED,
                            &child_disconnected_event, sizeof(child_disconnected_event), portMAX_DELAY);
         }
 
-        layout.removeChild(meta.last_hop);
+        layout.removeChild(meta.from);
     }
 }
 
