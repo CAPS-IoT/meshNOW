@@ -277,6 +277,41 @@ void PacketHandler::handle(const MetaData& meta, const packets::RootReachable& p
     send::enqueuePayload(packets::RootUnreachable{}, send::DownstreamRetry{});
 }
 
+void PacketHandler::handle(const MetaData& meta, const packets::ConnectEnd&) {
+    if (!lastHopIsFrom(meta)) return;
+
+    auto& layout = layout::Layout::get();
+
+    if (isParent(meta.last_hop)) {
+        ESP_LOGI(TAG, "Parent " MACSTR " ended connection", MAC2STR(meta.last_hop));
+
+        {
+            meshnow_event_parent_disconnected_t parent_disconnected_event;
+            util::MacAddr& parent_mac = layout.getParent().mac;
+            std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_disconnected_event.parent_mac);
+            esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
+                           &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
+        }
+
+        layout.removeParent();
+        state::setState(state::State::DISCONNECTED_FROM_PARENT);
+        return;
+    }
+
+    if (isChild(meta.last_hop)) {
+        ESP_LOGI(TAG, "Child " MACSTR " ended connection", MAC2STR(meta.last_hop));
+
+        {
+            meshnow_event_child_disconnected_t child_disconnected_event;
+            std::copy(meta.last_hop.addr.begin(), meta.last_hop.addr.end(), child_disconnected_event.child_mac);
+            esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_DISCONNECTED,
+                           &child_disconnected_event, sizeof(child_disconnected_event), portMAX_DELAY);
+        }
+
+        layout.removeChild(meta.last_hop);
+    }
+}
+
 void PacketHandler::handle(const MetaData& meta, const packets::DataFragment& p) {
     if (!isNeighbor(meta.last_hop)) return;
 

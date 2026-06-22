@@ -34,6 +34,7 @@ class PacketHandler {
     static void handle(const MetaData& meta, const packets::RoutingTableRemove& p);
     static void handle(const MetaData& meta, const packets::RootUnreachable& p);
     static void handle(const MetaData& meta, const packets::RootReachable& p);
+    static void handle(const MetaData& meta, const packets::ConnectEnd& p);
     static void handle(const MetaData& meta, const packets::DataFragment& p);
     static void handle(const MetaData& meta, const packets::CustomData& p);
 };
