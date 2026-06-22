@@ -56,7 +56,10 @@ Neighbor& Layout::getParent() { return parent_.value(); }
 
 void Layout::setParent(const util::MacAddr& mac) { parent_.emplace(mac); }
 
-void Layout::removeParent() { parent_.reset(); }
+void Layout::removeParent() { 
+    
+    parent_.reset(); 
+}
 
 bool Layout::hasChild(const util::MacAddr& mac) const {
     for (const auto& child : children_) {

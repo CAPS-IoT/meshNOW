@@ -81,10 +81,14 @@ void UnreachableTimeoutJob::performAction() {
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
-
+            
+            // Send the ConnectEnd packet
+            auto payload = packets::ConnectEnd{};
+            send::enqueuePayload(payload, send::DirectOnce{parent.mac});
             layout.removeParent();
             state::setState(state::State::DISCONNECTED_FROM_PARENT);  // set state to disconnected
         }
+}
     }
 }
 
@@ -181,6 +185,9 @@ void NeighborCheckJob::performAction() {
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
 
+            // Send the ConnectEnd packet
+            auto payload = packets::ConnectEnd{};
+            send::enqueuePayload(payload, send::DirectOnce{parent.mac});
             layout.removeParent();
             state::setState(state::State::DISCONNECTED_FROM_PARENT);
         }

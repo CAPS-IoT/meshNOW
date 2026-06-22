@@ -56,8 +56,10 @@ struct CustomData {
     util::Buffer data;
 };
 
+struct ConnectEnd {};
+
 using Payload = std::variant<Status, SearchProbe, SearchReply, ConnectRequest, ConnectOk, RoutingTableAdd,
-                             RoutingTableRemove, RootUnreachable, RootReachable, DataFragment, CustomData>;
+                             RoutingTableRemove, RootUnreachable, RootReachable, DataFragment, CustomData, ConnectEnd>;
 
 struct Packet {
     uint32_t id;
