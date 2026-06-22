@@ -190,25 +190,9 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectRequest& 
     if (knowsNode(meta.from)) return;
     if (!canAcceptNewChild()) return;
 
-    // add to layout
-    layout().addChild(meta.from);
-
-    ESP_LOGI(TAG, "Child " MACSTR " connected", MAC2STR(meta.from));
-
-    // fire connect event
-    {
-        meshnow_event_child_connected_t child_connected_event;
-        std::copy(meta.from.addr.begin(), meta.from.addr.end(), child_connected_event.child_mac);
-        esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_CONNECTED, &child_connected_event,
-                       sizeof(child_connected_event), portMAX_DELAY);
-    }
-
     // send reply
     ESP_LOGV(TAG, "Sending Connect Response");
     send::enqueuePayload(packets::ConnectOk{state::getRootMac()}, send::DirectOnce(meta.from));
-
-    // send routing table add packet upstream
-    send::enqueuePayload(packets::RoutingTableAdd{meta.from}, send::UpstreamRetry{});
 }
 
 void PacketHandler::handle(const MetaData& meta, const packets::ConnectOk& p) {
@@ -223,7 +207,34 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectOk& p) {
         .rssi = meta.rssi
     };
     event::Internal::fire(event::InternalEvent::GOT_CONNECT_RESPONSE, &data, sizeof(data));
+
+    //sends a response
+    send::enqueuePayload(packets::ConnectOkAck{}, send::DirectOnce{meta.from});
 }
+
+void PacketHandler::handle(const MetaData& meta, const packets::ConnectOkAck& p) {
+    if (!lastHopIsFrom(meta)) return;
+    if (knowsNode(meta.from)) return;
+    if (!reachesRoot() || !canAcceptNewChild()) {
+        //send ConnectEnd message
+    }
+    // add to layout
+    layout().addChild(meta.from);
+
+    ESP_LOGI(TAG, "Child " MACSTR " connected", MAC2STR(meta.from));
+
+    // fire connect event
+    {
+        meshnow_event_child_connected_t child_connected_event;
+        std::copy(meta.from.addr.begin(), meta.from.addr.end(), child_connected_event.child_mac);
+        esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_CONNECTED, &child_connected_event,
+                       sizeof(child_connected_event), portMAX_DELAY);
+    }
+
+    // send routing table add packet upstream
+    send::enqueuePayload(packets::RoutingTableAdd{meta.from}, send::UpstreamRetry{});
+}
+
 
 void PacketHandler::handle(const MetaData& meta, const packets::RoutingTableAdd& p) {
     // TODO safety checks

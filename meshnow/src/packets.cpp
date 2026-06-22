@@ -129,6 +129,11 @@ static void serialize(S& s, ConnectOk& p) {
 }
 
 template <typename S>
+static void serialize(S&, ConnectOkAck&) {
+    //no data
+}
+
+template <typename S>
 static void serialize(S& s, RoutingTableAdd& p) {
     s.object(p.entry);
 }
