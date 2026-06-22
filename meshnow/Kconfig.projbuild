@@ -102,67 +102,67 @@ menu "MeshNOW Customization"
     
     config STATUS_MESSAGE_LEVEL
         int "status message level"
-        default 1
+        default 0
         help 
             Priority level of status messages.
         
     config SEARCH_PROBE_MESSAGE_LEVEL
         int "search probe message level"
-        default 1
+        default 0
         help 
             Priority level of search probe messages.
 
     config SEARCH_REPLY_MESSAGE_LEVEL
         int "search reply message level"
-        default 1
+        default 0
         help 
             Priority level of search reply messages.
 
     config CONNECT_REQUEST_MESSAGE_LEVEL
         int "connect request message level"
-        default 1
+        default 0
         help 
             Priority level of connecty request messages.
 
     config CONNECT_OK_MESSAGE_LEVEL
-    int "connect ok message level"
-    default 1
-    help
-        Priority level of connect ok messages.
+        int "connect ok message level"
+        default 0
+        help
+            Priority level of connect ok messages.
 
     config ROUTING_TABLE_ADD_MESSAGE_LEVEL
         int "routing table add message level"
-        default 1
+        default 0
         help
             Priority level of routing table add messages.
 
     config ROUTING_TABLE_REMOVE_MESSAGE_LEVEL
         int "routing table remove message level"
-        default 1
+        default 0
         help
             Priority level of routing table remove messages.
 
     config ROOT_UNREACHABLE_MESSAGE_LEVEL
         int "root unreachable message level"
-        default 1
+        default 0
         help
             Priority level of root unreachable messages.
 
     config ROOT_REACHABLE_MESSAGE_LEVEL
         int "root reachable message level"
-        default 1
+        default 0
         help
             Priority level of root reachable messages.
 
     config DATA_FRAGMENT_MESSAGE_LEVEL
         int "data fragment message level"
-        default 1
+        default 0
         help
             Priority level of data fragment messages.
 
     config CUSTOM_DATA_MESSAGE_LEVEL
         int "custom data message level"
-        default 1
+        default 0
         help
             Priority level of custom data messages.
 
