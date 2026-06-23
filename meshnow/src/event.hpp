@@ -15,6 +15,7 @@ enum class InternalEvent : int32_t {
     STATE_CHANGED,
     PARENT_FOUND,
     GOT_CONNECT_RESPONSE,
+    TIMEOUT_CONNECT_RESPONSE
 };
 
 struct StateChangedEvent {

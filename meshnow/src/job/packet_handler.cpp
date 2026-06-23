@@ -134,18 +134,11 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
 
     auto& layout = layout::Layout::get();
 
-    // is child?
-    if (layout.hasChild(meta.from)) {
-        auto& child = layout.getChild(meta.from);
-        child.last_seen = xTaskGetTickCount();
-    }
-
     // is parent?
     if (layout.hasParent()) {
         auto& parent = layout.getParent();
         if (parent.mac != meta.from) return;
 
-        parent.last_seen = xTaskGetTickCount();
         switch (p.state) {
             case state::State::DISCONNECTED_FROM_PARENT:
             case state::State::CONNECTED_TO_PARENT: {

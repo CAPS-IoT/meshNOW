@@ -215,24 +215,16 @@ void ConnectJob::SearchPhase::writeChannelToNVS(uint8_t channel) {
 // CONNECT PHASE //
 
 TickType_t ConnectJob::ConnectPhase::nextActionAt() const noexcept {
-    if (!started_) return 0;
-
-    if (!awaiting_connect_response_) {
-        return 0;
-    } else {
-        return last_connect_request_time_ + CONNECT_TIMEOUT;
+    if (started_) {
+        return portMAX_DELAY;
     }
+    return 0;
 }
 
 void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
     if (!started_) {
         ESP_LOGI(TAG, "Starting connect phase");
         started_ = true;
-    }
-
-    if (awaiting_connect_response_) {
-        ESP_LOGI(TAG, "Connect request timed out");
-        awaiting_connect_response_ = false;
     }
 
     // send a connect request to the best potential parent
@@ -246,57 +238,79 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
         return;
     }
 
-    current_parent_mac_ = it->mac_addr;
-    current_parent_rssi_ = it->rssi;
+    ESP_LOGI(TAG, "Sending connect request to " MACSTR, MAC2STR(it->mac_addr));
+    send::enqueuePayload(packets::ConnectRequest{}, send::DirectOnce(it->mac_addr));
+    job.phase_ = AwaitingConnectResponsePhase(xTaskGetTickCount(), it->mac_addr, it->rssi);
+
     job.parent_infos_.erase(it);
-
-    awaiting_connect_response_ = true;
-    last_connect_request_time_ = xTaskGetTickCount();
-    sendConnectRequest(current_parent_mac_);
 }
 
-void ConnectJob::ConnectPhase::event_handler(ConnectJob &job, event::InternalEvent event, void *event_data) {
-    if (event != event::InternalEvent::GOT_CONNECT_RESPONSE) return;
+void ConnectJob::ConnectPhase::event_handler(ConnectJob &job, event::InternalEvent event, void *event_data) {}
 
-    auto &response_data = *static_cast<event::GotConnectResponseData *>(event_data);
-    auto parent_mac = response_data.parent;
+// AwaitingConnectResponsePhase //
 
-    // got a wrong connection response
-    if (parent_mac != current_parent_mac_) return;
+TickType_t ConnectJob::AwaitingConnectResponsePhase::nextActionAt() const noexcept {
+    return request_sent_tick_ + CONNECT_TIMEOUT;
+}
 
-    // got a correct connection response
-    ESP_LOGI(TAG, "Got accepted by " MACSTR, MAC2STR(parent_mac));
-    awaiting_connect_response_ = false;
+void ConnectJob::AwaitingConnectResponsePhase::performAction(ConnectJob &job) {
+    if (started_) return;
 
-    // we are now connected to the parent
-    // set parent info
-    auto &layout = layout::Layout::get();
-    layout.setParent(parent_mac);
+    started_ = true;
+    ESP_LOGI(TAG, "Connect response timeout fired, retrying with next parent");
+    event::Internal::fire(event::InternalEvent::TIMEOUT_CONNECT_RESPONSE, NULL, 0);
+}
 
-    // set root mac
-    state::setRootMac(response_data.root);
+void ConnectJob::AwaitingConnectResponsePhase::event_handler(ConnectJob &job, event::InternalEvent event,
+                                                             void *event_data) {
+    switch (event) {
+        case event::InternalEvent::TIMEOUT_CONNECT_RESPONSE:
+            job.phase_ = ConnectPhase();
+            break;
+        case event::InternalEvent::GOT_CONNECT_RESPONSE: {
+            auto &response_data = *static_cast<event::GotConnectResponseData *>(event_data);
+            auto parent_mac = response_data.parent;
 
-    // update the state
-    // we can assume to immediately reach the root since the parent also has to reach the root
-    state::setState(state::State::REACHES_ROOT);
+            // got a wrong connection response
+            if (parent_mac != current_parent_mac_) return;
 
-    // fire connect event
-    {
-        meshnow_event_parent_connected_t parent_connected_event;
-        // printf("Connection strength is %d\n", current_parent_rssi_);
-        parent_connected_event.parent_rssi = current_parent_rssi_;
-        std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_connected_event.parent_mac);
-        esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_CONNECTED, &parent_connected_event,
-                       sizeof(parent_connected_event), portMAX_DELAY);
+            // got a correct connection response
+            ESP_LOGI(TAG, "Got accepted by " MACSTR, MAC2STR(parent_mac));
+
+            // we are now connected to the parent
+            // set parent info
+            auto &layout = layout::Layout::get();
+            layout.setParent(parent_mac);
+
+            // set root mac
+            state::setRootMac(response_data.root);
+
+            // update the state
+            // we can assume to immediately reach the root since the parent also has to reach the root
+            state::setState(state::State::REACHES_ROOT);
+
+            // fire connect event
+            {
+                meshnow_event_parent_connected_t parent_connected_event;
+                // printf("Connection strength is %d\n", current_parent_rssi_);
+                parent_connected_event.parent_rssi = current_parent_rssi_;
+                std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_connected_event.parent_mac);
+                esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_CONNECTED, &parent_connected_event,
+                               sizeof(parent_connected_event), portMAX_DELAY);
+            }
+
+            //add last seen parent
+            auto& parent = layout.getParent();
+            parent.last_seen = xTaskGetTickCount();
+
+            // we now want to perform the reset
+            job.phase_ = DonePhase{};
+            break;
+        }
+        default:
+            ESP_LOGI(TAG, "Ignoring event %d in AwaitingConnectResponsePhase", static_cast<int>(event));
+            break;
     }
-
-    // we now want to perform the reset
-    job.phase_ = DonePhase{};
-}
-
-void ConnectJob::ConnectPhase::sendConnectRequest(const util::MacAddr &to_mac) {
-    ESP_LOGI(TAG, "Sending connect request to " MACSTR, MAC2STR(to_mac));
-    send::enqueuePayload(packets::ConnectRequest{}, send::DirectOnce(to_mac));
 }
 
 // DonePhase //
