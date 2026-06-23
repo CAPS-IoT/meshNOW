@@ -106,6 +106,7 @@ static void serialize(S& s, Status& p) {
     s.value1b(p.state);
     // TODO optimize with custom extension
     s.ext(p.root, bitsery::ext::StdOptional{});
+    s.value4b(p.seq);
 }
 
 template <typename S>

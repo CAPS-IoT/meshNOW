@@ -13,6 +13,7 @@ namespace meshnow::packets {
 struct Status {
     state::State state;
     std::optional<util::MacAddr> root;
+    uint32_t seq;
 };
 
 struct SearchProbe {};

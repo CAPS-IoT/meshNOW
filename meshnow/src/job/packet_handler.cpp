@@ -137,27 +137,49 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
     // is parent?
     if (layout.hasParent()) {
         auto& parent = layout.getParent();
-        if (parent.mac != meta.from) return;
+        if (parent.mac == meta.from) {
 
-        switch (p.state) {
-            case state::State::DISCONNECTED_FROM_PARENT:
-            case state::State::CONNECTED_TO_PARENT: {
-                state::setState(state::State::CONNECTED_TO_PARENT);
-                break;
-            }
-            case state::State::REACHES_ROOT: {
-                // this should never be the case, but we never know with malicious packets
-                if (!p.root.has_value()) return;
+            switch (p.state) {
+                case state::State::DISCONNECTED_FROM_PARENT:
+                case state::State::CONNECTED_TO_PARENT: {
+                    state::setState(state::State::CONNECTED_TO_PARENT);
+                    break;
+                }
+                case state::State::REACHES_ROOT: {
+                    // this should never be the case, but we never know with malicious packets
+                    if (!p.root.has_value()) break;
 
-                // set root mac
-                state::setRootMac(p.root.value());
-                // set state
-                state::setState(state::State::REACHES_ROOT);
-                break;
+                    // set root mac
+                    state::setRootMac(p.root.value());
+                    // set state
+                    state::setState(state::State::REACHES_ROOT);
+                    break;
+                }
             }
         }
-        return;
     }
+
+    layout::Neighbor neigh;
+    if (layout.hasChild(meta.from)) {
+        neigh = layout.getChild(meta.from);
+    } else if (layout.hasParent()) {
+        neigh = layout.getParent();
+    }
+    if (p.seq&1 == 1) {
+        packets::Status response{
+            .state = state::getState(),
+            .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
+            .seq = (p.seq ^ 1) + 2,
+        }
+        send::enqueuePayload(response, send::DirectOnce{meta.from});
+    } else {
+        if (neigh.rtt_seq != p.seq) return;
+        auto rtt_sample = xTaskGetTickCount() - neigh.last_seen_rtt;
+        auto rtt_dev_sample = neigh.rtt_est >= rtt_sample ? (neigh.rtt_est - rtt_sample) : (rtt_sample - neigh.rtt_est)
+        neigh.rtt_est = ((neigh.rtt_est * 7) + rtt_sample)/8
+        neigh.rtt_dev_est = ((neigh.rtt_dev_est * 3) + rtt_dev_sample)/4
+    }
+    return;
 }
 
 void PacketHandler::handle(const MetaData& meta, const packets::SearchProbe& p) {

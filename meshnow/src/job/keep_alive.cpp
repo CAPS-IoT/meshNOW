@@ -45,15 +45,31 @@ void StatusSendJob::performAction() {
 void StatusSendJob::sendStatus() {
     ESP_LOGD(TAG, "Sending status beacons to neighbors");
     auto state = state::getState();
+    auto layout = layout::Layout::get();
+    for (const auto& child : layout.getChildren()){
+        packets::Status payload{
+            .state = state,
+            .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
+            .seq = child.rtt_seq | 1,
+        };
+        child.rtt_seq += 2;
+        child.last_seen_rtt = xTaskGetTickCount();
 
-    packets::Status payload{
-        .state = state,
-        .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
-    };
+        send::enqueuePayload(payload, send::DirectOnce{child.mac});
+    }
+    if (layout.hasParent()) {
+        auto& parent = layout.getParent();
+        packets::Status payload{
+            .state = state,
+            .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
+            .seq = parent.rtt_seq,
+        };
+        parent.rtt_seq += 1;
+        parent.last_seen_rtt = xTaskGetTickCount();
 
-    send::enqueuePayload(payload, send::NeighborsOnce{});
+        send::enqueuePayload(payload, send::DirectOnce{parent.mac});
+    }
 }
-
 // UnreachableTimeoutJob //
 
 TickType_t UnreachableTimeoutJob::nextActionAt() const noexcept {
@@ -146,7 +162,8 @@ void NeighborCheckJob::performAction() {
 
     // direct children
     for (auto it = layout.getChildren().begin(); it != layout.getChildren().end();) {
-        if (now - it->last_seen > KEEP_ALIVE_TIMEOUT) {
+        auto timeout = it->rtt_est + 4*it->rtt_dev_est;
+        if (now - it->last_seen > timeout) {
             auto mac = it->mac;
             ESP_LOGW(TAG, "Direct child " MACSTR " timed out", MAC2STR(mac));
 
@@ -169,7 +186,8 @@ void NeighborCheckJob::performAction() {
     // parent
     if (layout.hasParent()) {
         auto& parent = layout.getParent();
-        if (now - parent.last_seen > KEEP_ALIVE_TIMEOUT) {
+        auto timeout = it->rtt_est + 4*it->rtt_dev_est;
+        if (now - parent.last_seen > timeout) {
             ESP_LOGW(TAG, "Parent " MACSTR " timed out", MAC2STR(parent.mac));
 
             // fire disconnect event
