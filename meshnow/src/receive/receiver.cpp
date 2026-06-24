@@ -61,44 +61,24 @@ void handle(Item&& item, const PacketType&) {
         std::same_as<PacketType, packets::DataFragment>       ? DATA_FRAGMENT_LEVEL :
                                                                0;
 
-<<<<<<< HEAD
-void Receiver::receiveCallback(const esp_now_recv_info_t *esp_now_info,
-                               const uint8_t *data, int data_len) {
-  // convert raw data pointer into buffer (vector) for deserialization TODO
-  // avoid this
-  std::vector<uint8_t> buffer(data, data + data_len);
-=======
     push(std::move(item), level);
 }
 void Receiver::receiveCallback(const esp_now_recv_info_t *esp_now_info, const uint8_t *data, int data_len) {
     // convert raw data pointer into buffer (vector) for deserialization TODO avoid this
     std::vector<uint8_t> buffer(data, data + data_len);
->>>>>>> 2026/N1/messages_priorities
 
-  // deserialize
-  auto packet = packets::deserialize(buffer);
+    // deserialize
+    auto packet = packets::deserialize(buffer);
 
-  // if deserialization failed, ignore
-  // could happen because of interference with connecting to a router
-  if (!packet) {
-    ESP_LOGV(TAG, "Failed to deserialize packet!");
-    return;
-  }
+    // if deserialization failed, ignore
+    // could happen because of interference with connecting to a router
+    if (!packet) {
+        ESP_LOGV(TAG, "Failed to deserialize packet!");
+        return;
+    }
 
-<<<<<<< HEAD
-  // update last seen
-  update_last_seen(util::MacAddr(esp_now_info->src_addr));
-
-  // create item
-  Item item{
-      util::MacAddr(esp_now_info->src_addr),
-      esp_now_info->rx_ctrl->rssi,
-      std::move(*packet),
-  };
-
-  // push item to queue
-  push(std::move(item));
-=======
+    // update last seen
+    update_last_seen(util::MacAddr(esp_now_info->src_addr));
     // create item
     Item item{
         util::MacAddr(esp_now_info->src_addr),
@@ -111,7 +91,6 @@ void Receiver::receiveCallback(const esp_now_recv_info_t *esp_now_info, const ui
         //if the packet should be forwarded, this should be handled with high priority
         push(std::move(item));
     }
->>>>>>> 2026/N1/messages_priorities
 }
 
 }  // namespace meshnow::receive
