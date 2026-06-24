@@ -71,11 +71,11 @@ void handle(Item&& item, const PacketType&) {
             ESP_LOGD(TAG, "Receiving CONNECT_OK : pushing at level %d", CONNECT_OK_LEVEL);
             return CONNECT_OK_LEVEL;
         }
-        else if constexpr (std::same_as<PacketType, packets::ConnectOkAck) {
+        else if constexpr (std::same_as<PacketType, packets::ConnectOkAck>) {
             ESP_LOGD(TAG, "Receiving CONNECT_OK_ACK : pushing at level %d", CONNECT_OK_ACK_LEVEL);
             return CONNECT_OK_ACK_LEVEL;
         }
-        else if constexpr (std::same_as<PacketType, packets::ConnectEnd) {
+        else if constexpr (std::same_as<PacketType, packets::ConnectEnd>) {
             ESP_LOGD(TAG, "Receiving CONNECT_ENT : pushing at level %d", CONNECT_END_LEVEL);
             return CONNECT_END_LEVEL;
         }
@@ -101,7 +101,7 @@ void handle(Item&& item, const PacketType&) {
         }
         else {
             ESP_LOGD(TAG, "Receiving UNKNOW : pushing at level 0\n");
-            return 0;
+            return p_level{0};
         }
     }();
     ESP_LOGD(TAG, "Pushing message to level %d", level);
