@@ -238,7 +238,9 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectOkAck& p)
     if (!lastHopIsFrom(meta)) return;
     if (knowsNode(meta.from)) return;
     if (!reachesRoot() || !canAcceptNewChild()) {
-        //send ConnectEnd message
+        send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce{meta.from});
+        ESP_LOGI(TAG, "Received connect acknowledge but cannot accept it anymore : send connect end");
+        return;
     }
     // add to layout
     layout().addChild(meta.from);

@@ -137,6 +137,18 @@ menu "MeshNOW Customization"
         help
             Priority level of connect ok messages.
 
+    config CONNECT_OK_ACK_MESSAGE_LEVEL
+        int "connect ok ack message level"
+        default 0
+        help
+            Priority level of connect ok ack messages.
+    
+    config CONNECT_END_MESSAGE_LEVEL
+        int "connect end message level"
+        default 0
+        help
+            Priority level of connect end messages.
+
     config ROUTING_TABLE_ADD_MESSAGE_LEVEL
         int "routing table add message level"
         default 0
