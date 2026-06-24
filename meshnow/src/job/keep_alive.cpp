@@ -45,8 +45,8 @@ void StatusSendJob::performAction() {
 void StatusSendJob::sendStatus() {
     ESP_LOGD(TAG, "Sending status beacons to neighbors");
     auto state = state::getState();
-    auto layout = layout::Layout::get();
-    for (const auto& child : layout.getChildren()){
+    auto& layout = layout::Layout::get();
+    for (auto& child : layout.getChildren()){
         packets::Status payload{
             .state = state,
             .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
@@ -186,7 +186,7 @@ void NeighborCheckJob::performAction() {
     // parent
     if (layout.hasParent()) {
         auto& parent = layout.getParent();
-        auto timeout = it->rtt_est + 4*it->rtt_dev_est;
+        auto timeout = parent.rtt_est + 4*parent.rtt_dev_est;
         if (now - parent.last_seen > timeout) {
             ESP_LOGW(TAG, "Parent " MACSTR " timed out", MAC2STR(parent.mac));
 

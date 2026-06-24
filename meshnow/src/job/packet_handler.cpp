@@ -158,26 +158,26 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
             }
         }
     }
+    auto* neigh = layout.hasChild(meta.from) ? &layout.getChild(meta.from) : 
+                    layout.hasParent() && layout.getParent().mac == meta.from ? &layout.getParent() :
+                    nullptr;
+                    
+    if (neigh == nullptr) return;
 
-    layout::Neighbor neigh;
-    if (layout.hasChild(meta.from)) {
-        neigh = layout.getChild(meta.from);
-    } else if (layout.hasParent()) {
-        neigh = layout.getParent();
-    }
-    if (p.seq&1 == 1) {
+    if ((p.seq&1) == 1) {
+        auto state = state::getState();
         packets::Status response{
-            .state = state::getState(),
+            .state = state,
             .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
             .seq = (p.seq ^ 1) + 2,
-        }
+        };
         send::enqueuePayload(response, send::DirectOnce{meta.from});
     } else {
-        if (neigh.rtt_seq != p.seq) return;
-        auto rtt_sample = xTaskGetTickCount() - neigh.last_seen_rtt;
-        auto rtt_dev_sample = neigh.rtt_est >= rtt_sample ? (neigh.rtt_est - rtt_sample) : (rtt_sample - neigh.rtt_est)
-        neigh.rtt_est = ((neigh.rtt_est * 7) + rtt_sample)/8
-        neigh.rtt_dev_est = ((neigh.rtt_dev_est * 3) + rtt_dev_sample)/4
+        if (neigh->rtt_seq != p.seq) return;
+        auto rtt_sample = xTaskGetTickCount() - neigh->last_seen_rtt;
+        auto rtt_dev_sample = neigh->rtt_est >= rtt_sample ? (neigh->rtt_est - rtt_sample) : (rtt_sample - neigh->rtt_est);
+        neigh->rtt_est = ((neigh->rtt_est * 7) + rtt_sample)/8;
+        neigh->rtt_dev_est = ((neigh->rtt_dev_est * 3) + rtt_dev_sample)/4;
     }
     return;
 }
