@@ -28,6 +28,9 @@ struct ConnectOk {
 
 struct ConnectOkAck {};
 
+struct ConnectEnd {};
+
+
 struct RoutingTableAdd {
     util::MacAddr entry;
 };
@@ -59,8 +62,9 @@ struct CustomData {
     util::Buffer data;
 };
 
+
 using Payload = std::variant<Status, SearchProbe, SearchReply, ConnectRequest, ConnectOk, ConnectOkAck, 
-                             RoutingTableAdd, RoutingTableRemove, RootUnreachable, RootReachable, 
+                             ConnectEnd, RoutingTableAdd, RoutingTableRemove, RootUnreachable, RootReachable, 
                              DataFragment, CustomData>;
 
 struct Packet {

@@ -89,17 +89,21 @@ void UnreachableTimeoutJob::performAction() {
         // if we haven't lost the parent by now because of a Keep Alive timeout, remove it
         auto& layout = layout::Layout::get();
         if (layout.hasParent()) {
+            auto parent_mac = layout.getParent().mac;
+
             // fire disconnect event
             {
                 meshnow_event_parent_disconnected_t parent_disconnected_event;
-                util::MacAddr& parent_mac = layout::Layout::get().getParent().mac;
                 std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_disconnected_event.parent_mac);
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
 
+            // Send the ConnectEnd packet
+            send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(parent_mac));
+
             layout.removeParent();
-            state::setState(state::State::DISCONNECTED_FROM_PARENT);  // set state to disconnected
+            state::setState(state::State::DISCONNECTED_FROM_PARENT);
         }
     }
 }
@@ -175,6 +179,8 @@ void NeighborCheckJob::performAction() {
                                &child_disconnected_event, sizeof(child_disconnected_event), portMAX_DELAY);
             }
 
+            send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(mac));
+
             layout.removeChild(it->mac);
             // send event upstream
             sendChildDisconnected(mac);
@@ -198,6 +204,9 @@ void NeighborCheckJob::performAction() {
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
+
+            // Send the ConnectEnd packet
+            send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(parent.mac));
 
             layout.removeParent();
             state::setState(state::State::DISCONNECTED_FROM_PARENT);

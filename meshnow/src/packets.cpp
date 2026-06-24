@@ -115,6 +115,12 @@ static void serialize(S&, SearchProbe&) {
 }
 
 template <typename S>
+static void serialize(S&, ConnectEnd&) {
+    // no data
+}
+
+
+template <typename S>
 static void serialize(S&, SearchReply&) {
     // no data
 }
