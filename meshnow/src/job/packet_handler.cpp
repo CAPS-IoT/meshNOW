@@ -220,6 +220,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectOk& p) {
     event::GotConnectResponseData data{
         .parent = meta.from,
         .root = p.root,
+        .rssi = meta.rssi
     };
     event::Internal::fire(event::InternalEvent::GOT_CONNECT_RESPONSE, &data, sizeof(data));
 }

@@ -24,6 +24,13 @@ menu "MeshNOW Customization"
             A smaller value may result in failing to accept a connection because the channel is switched before a reply is received.
             A larger value may increase the time it takes to connect as the node stays longer on dead channels.
 
+    config RECONNECT_ATTEMPTS
+        int "Reconnect attempts"
+        default 3
+        help
+            If a node fails to connect to a parent, it will retry connecting to the same parent a few times before giving up and going back to searching for new parents.
+            This value determines the number of reconnect attempts.
+
     config FIRST_PARENT_WAIT
         int "First parent wait time (ms)"
         default 3000
