@@ -219,7 +219,12 @@ void ConnectJob::SearchPhase::writeChannelToNVS(uint8_t channel) {
 
 // CONNECT PHASE //
 
-TickType_t ConnectJob::ConnectPhase::nextActionAt() const noexcept { return 0; }
+TickType_t ConnectJob::ConnectPhase::nextActionAt() const noexcept {
+    if (started_) {
+        return portMAX_DELAY;
+    }
+    return 0;
+}
 
 void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
     if (!started_) {
@@ -238,11 +243,11 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
         return;
     }
 
-    job.parent_infos_.erase(it);
-
     ESP_LOGI(TAG, "Sending connect request to " MACSTR, MAC2STR(it->mac_addr));
     send::enqueuePayload(packets::ConnectRequest{}, send::DirectOnce(it->mac_addr));
     job.phase_ = AwaitingConnectResponsePhase(xTaskGetTickCount(), it->mac_addr, RequestOrigin::INITIAL);
+
+    job.parent_infos_.erase(it);
 }
 
 // no-op
