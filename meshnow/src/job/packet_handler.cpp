@@ -178,6 +178,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
         auto rtt_dev_sample = neigh->rtt_est >= rtt_sample ? (neigh->rtt_est - rtt_sample) : (rtt_sample - neigh->rtt_est);
         neigh->rtt_est = ((neigh->rtt_est * 7) + rtt_sample)/8;
         neigh->rtt_dev_est = ((neigh->rtt_dev_est * 3) + rtt_dev_sample)/4;
+        ESP_LOGV(TAG, "new rtt sample %d, rtt estimate %d and rtt dev estimate %dcode ", rtt_sample, neigh->rtt_est, neigh->rtt_dev_est);
     }
     return;
 }
