@@ -182,7 +182,7 @@ void NeighborCheckJob::performAction() {
         #endif
         if (now - it->last_seen > timeout) {
             auto mac = it->mac;
-            ESP_LOGW(TAG, "Direct child " MACSTR " timed out (timeout %d)", MAC2STR(mac), timeout);
+            ESP_LOGW(TAG, "Direct child " MACSTR " timed out (timeout %lu)", MAC2STR(mac), timeout);
 
             // fire disconnect event
             {
@@ -212,7 +212,7 @@ void NeighborCheckJob::performAction() {
         auto timeout = KEEP_ALIVE_TIMEOUT;
         #endif
         if (now - parent.last_seen > timeout) {
-            ESP_LOGW(TAG, "Parent " MACSTR " timed out (timeout)", MAC2STR(parent.mac), timeout);
+            ESP_LOGW(TAG, "Parent " MACSTR " timed out (timeout %lu)", MAC2STR(parent.mac), timeout);
 
             // fire disconnect event
             {

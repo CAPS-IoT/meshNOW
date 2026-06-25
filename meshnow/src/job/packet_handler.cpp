@@ -242,7 +242,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectRequest& 
     // send reply
     ESP_LOGV(TAG, "Sending Connect Response");
     send::enqueuePayload(packets::ConnectOk{state::getRootMac()}, send::DirectOnce(meta.from));
-    #ifdef !CONFIG_USE_CONNECT_OK_ACK_MESSAGE
+    #ifndef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
         add_child(meta);
     #endif
 }
