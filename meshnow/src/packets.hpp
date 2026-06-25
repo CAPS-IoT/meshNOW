@@ -13,7 +13,9 @@ namespace meshnow::packets {
 struct Status {
     state::State state;
     std::optional<util::MacAddr> root;
+#ifdef CONFIG_USE_RTT_FOR_TIMEOUT
     uint32_t seq;
+#endif
 };
 
 struct SearchProbe {};
@@ -26,9 +28,13 @@ struct ConnectOk {
     util::MacAddr root;
 };
 
+#ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
 struct ConnectOkAck {};
+#endif
 
+#ifdef CONFIG_USE_CONNECT_END_MESSAGE
 struct ConnectEnd {};
+#endif
 
 
 struct RoutingTableAdd {
@@ -63,9 +69,16 @@ struct CustomData {
 };
 
 
-using Payload = std::variant<Status, SearchProbe, SearchReply, ConnectRequest, ConnectOk, ConnectOkAck, 
-                             ConnectEnd, RoutingTableAdd, RoutingTableRemove, RootUnreachable, RootReachable, 
-                             DataFragment, CustomData>;
+using Payload = std::variant<Status, SearchProbe, SearchReply, ConnectRequest, ConnectOk, 
+                            RoutingTableAdd, RoutingTableRemove, RootUnreachable, RootReachable, 
+                            DataFragment,
+                            #ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
+                            ConnectOkAck,
+                            #endif
+                            #ifdef CONFIG_USE_CONNECT_END_MESSAGE
+                            ConnectEnd,
+                            #endif
+                            CustomData>;
 
 struct Packet {
     uint32_t id;

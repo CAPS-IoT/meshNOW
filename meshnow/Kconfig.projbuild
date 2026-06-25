@@ -46,6 +46,26 @@ menu "MeshNOW Customization"
             During the search phase, the node keeps track of only a few parents at a time to save memory and speed up the connection process.
             This value determines the maximum number of parents that the node keeps track of. If a better parent is found, the node will replace the worst parent it is tracking.
 
+    config USE_CONNECT_OK_ACK_MESSAGE
+        int "Use connect ok ack message to validate the reception of a connect ok message"
+        default 1
+        help 
+            Use connect ok ack message to validate the reception of a connect ok message. The parent registers the child only when it receives an connect ok ack message.
+            When it receives a connect request, it sends back a connect ok, to which the child respond with a connect ok ack
+    
+    config USE_CONNECT_END_MESSAGE
+        int "Use connect end message"
+        default 1
+        help
+            Sending an end of connection message to tear down a connection rather than waiting for the neighbor to time out.
+
+    config USE_RTT_FOR_TIMEOUT
+        int "Use round-trip-time (RTT) to compute timeout"
+        default 1
+        help
+            Instead of having a hard-threshold time out, use an estimate of the time it takes for two neighbors to communicate. Samples of RTT are computed by changing the behavior of status packets, 
+            so that they can be responded to, and the first and second moments are estimated by using a leaky integrator. The timeout is then specific to each neighbor, and a function of the first 
+            and second moments of the RTT.
     config CONNECT_TIMEOUT
         int "Connection timeout (ms)"
         default 3000

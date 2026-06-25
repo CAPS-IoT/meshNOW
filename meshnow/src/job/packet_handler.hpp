@@ -30,12 +30,16 @@ class PacketHandler {
     static void handle(const MetaData& meta, const packets::SearchReply& p);
     static void handle(const MetaData& meta, const packets::ConnectRequest& p);
     static void handle(const MetaData& meta, const packets::ConnectOk& p);
+    #ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
     static void handle(const MetaData& meta, const packets::ConnectOkAck& p);
+    #endif
     static void handle(const MetaData& meta, const packets::RoutingTableAdd& p);
     static void handle(const MetaData& meta, const packets::RoutingTableRemove& p);
     static void handle(const MetaData& meta, const packets::RootUnreachable& p);
     static void handle(const MetaData& meta, const packets::RootReachable& p);
+    #ifdef CONFIG_USE_CONNECT_END_MESSAGE
     static void handle(const MetaData& meta, const packets::ConnectEnd& p);
+    #endif
     static void handle(const MetaData& meta, const packets::DataFragment& p);
     static void handle(const MetaData& meta, const packets::CustomData& p);
 };

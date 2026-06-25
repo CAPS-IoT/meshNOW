@@ -125,6 +125,24 @@ inline bool disconnected() {
     }
 }
 
+inline void add_child(const MetaData& meta) {
+    // add to layout
+    layout().addChild(meta.from);
+
+    ESP_LOGI(TAG, "Child " MACSTR " connected", MAC2STR(meta.from));
+
+    // fire connect event
+    {
+        meshnow_event_child_connected_t child_connected_event;
+        std::copy(meta.from.addr.begin(), meta.from.addr.end(), child_connected_event.child_mac);
+        esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_CONNECTED, &child_connected_event,
+                       sizeof(child_connected_event), portMAX_DELAY);
+    }
+
+    // send routing table add packet upstream
+    send::enqueuePayload(packets::RoutingTableAdd{meta.from}, send::UpstreamRetry{});
+}
+
 }  // namespace
 
 // HANDLERS //
@@ -158,6 +176,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
             }
         }
     }
+    #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
     auto* neigh = layout.hasChild(meta.from) ? &layout.getChild(meta.from) : 
                     layout.hasParent() && layout.getParent().mac == meta.from ? &layout.getParent() :
                     nullptr;
@@ -165,6 +184,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
     if (neigh == nullptr) return;
 
     if ((p.seq&1) == 1) {
+        //odd means seq, must reply with an ack
         auto state = state::getState();
         packets::Status response{
             .state = state,
@@ -173,14 +193,20 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
         };
         send::enqueuePayload(response, send::DirectOnce{meta.from});
     } else {
+        //even means ack, must check the sequence match and compute new rtt est
         if (neigh->rtt_seq != p.seq) return;
         auto rtt_sample = xTaskGetTickCount() - neigh->last_seen_rtt;
         auto rtt_dev_sample = neigh->rtt_est >= rtt_sample ? (neigh->rtt_est - rtt_sample) : (rtt_sample - neigh->rtt_est);
         neigh->rtt_est = ((neigh->rtt_est * 7) + rtt_sample)/8;
+        //sometimes we have little precision problem with for instance rtt_est = 0 and rtt_sample = 1
+        neigh->rtt_est = neigh->rtt_est == 0 ? 1 : neigh->rtt_est;
+        //same precaution here
         neigh->rtt_dev_est = ((neigh->rtt_dev_est * 3) + rtt_dev_sample)/4;
+        neigh->rtt_dev_est = neigh->rtt_dev_est == 0 ? 1 : neigh->rtt_est;
         ESP_LOGV(TAG, "new rtt sample %d, rtt estimate %d and rtt dev estimate %dcode ", rtt_sample, neigh->rtt_est, neigh->rtt_dev_est);
     }
     return;
+    #endif
 }
 
 void PacketHandler::handle(const MetaData& meta, const packets::SearchProbe& p) {
@@ -216,6 +242,9 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectRequest& 
     // send reply
     ESP_LOGV(TAG, "Sending Connect Response");
     send::enqueuePayload(packets::ConnectOk{state::getRootMac()}, send::DirectOnce(meta.from));
+    #ifdef !CONFIG_USE_CONNECT_OK_ACK_MESSAGE
+        add_child(meta);
+    #endif
 }
 
 void PacketHandler::handle(const MetaData& meta, const packets::ConnectOk& p) {
@@ -231,10 +260,13 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectOk& p) {
     };
     event::Internal::fire(event::InternalEvent::GOT_CONNECT_RESPONSE, &data, sizeof(data));
 
+    #ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
     //sends a response
     send::enqueuePayload(packets::ConnectOkAck{}, send::DirectOnce{meta.from});
+    #endif
 }
 
+#ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
 void PacketHandler::handle(const MetaData& meta, const packets::ConnectOkAck& p) {
     if (!lastHopIsFrom(meta)) return;
     if (knowsNode(meta.from)) return;
@@ -243,23 +275,9 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectOkAck& p)
         ESP_LOGI(TAG, "Received connect acknowledge but cannot accept it anymore : send connect end");
         return;
     }
-    // add to layout
-    layout().addChild(meta.from);
-
-    ESP_LOGI(TAG, "Child " MACSTR " connected", MAC2STR(meta.from));
-
-    // fire connect event
-    {
-        meshnow_event_child_connected_t child_connected_event;
-        std::copy(meta.from.addr.begin(), meta.from.addr.end(), child_connected_event.child_mac);
-        esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_CONNECTED, &child_connected_event,
-                       sizeof(child_connected_event), portMAX_DELAY);
-    }
-
-    // send routing table add packet upstream
-    send::enqueuePayload(packets::RoutingTableAdd{meta.from}, send::UpstreamRetry{});
+    add_child(meta);
 }
-
+#endif
 
 void PacketHandler::handle(const MetaData& meta, const packets::RoutingTableAdd& p) {
     // TODO safety checks
@@ -312,7 +330,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::RootReachable& p
     // forward to all children
     send::enqueuePayload(packets::RootUnreachable{}, send::DownstreamRetry{});
 }
-
+#ifdef CONFIG_USE_CONNECT_END_MESSAGE
 void PacketHandler::handle(const MetaData& meta, const packets::ConnectEnd&) {
     if (!lastHopIsFrom(meta)) return;
 
@@ -347,6 +365,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectEnd&) {
         layout.removeChild(meta.from);
     }
 }
+#endif
 
 void PacketHandler::handle(const MetaData& meta, const packets::DataFragment& p) {
     if (!isNeighbor(meta.last_hop)) return;

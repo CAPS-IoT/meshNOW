@@ -39,8 +39,12 @@ constexpr meshnow::receive::p_level SEARCH_PROBE_LEVEL = CONFIG_SEARCH_PROBE_MES
 constexpr meshnow::receive::p_level SEARCH_REPLY_LEVEL = CONFIG_SEARCH_REPLY_MESSAGE_LEVEL;
 constexpr meshnow::receive::p_level CONNECT_REQUEST_LEVEL = CONFIG_CONNECT_REQUEST_MESSAGE_LEVEL;
 constexpr meshnow::receive::p_level CONNECT_OK_LEVEL = CONFIG_CONNECT_OK_MESSAGE_LEVEL;
+#ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
 constexpr meshnow::receive::p_level CONNECT_OK_ACK_LEVEL = CONFIG_CONNECT_OK_ACK_MESSAGE_LEVEL;
+#endif
+#ifdef CONFIG_USE_CONNECT_END_MESSAGE
 constexpr meshnow::receive::p_level CONNECT_END_LEVEL = CONFIG_CONNECT_END_MESSAGE_LEVEL;
+#endif
 constexpr meshnow::receive::p_level ROUTING_TABLE_ADD_LEVEL = CONFIG_ROUTING_TABLE_ADD_MESSAGE_LEVEL;
 constexpr meshnow::receive::p_level ROUTING_TABLE_REMOVE_LEVEL = CONFIG_ROUTING_TABLE_REMOVE_MESSAGE_LEVEL;
 constexpr meshnow::receive::p_level ROOT_UNREACHABLE_LEVEL = CONFIG_ROOT_UNREACHABLE_MESSAGE_LEVEL;
@@ -71,14 +75,18 @@ void handle(Item&& item, const PacketType&) {
             ESP_LOGD(TAG, "Receiving CONNECT_OK : pushing at level %d", CONNECT_OK_LEVEL);
             return CONNECT_OK_LEVEL;
         }
+        #ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
         else if constexpr (std::same_as<PacketType, packets::ConnectOkAck>) {
             ESP_LOGD(TAG, "Receiving CONNECT_OK_ACK : pushing at level %d", CONNECT_OK_ACK_LEVEL);
             return CONNECT_OK_ACK_LEVEL;
         }
+        #endif
+        #ifdef CONFIG_USE_CONNECT_END_MESSAGE
         else if constexpr (std::same_as<PacketType, packets::ConnectEnd>) {
             ESP_LOGD(TAG, "Receiving CONNECT_ENT : pushing at level %d", CONNECT_END_LEVEL);
             return CONNECT_END_LEVEL;
         }
+        #endif
         else if constexpr (std::same_as<PacketType, packets::RoutingTableAdd>) {
             ESP_LOGD(TAG, "Receiving ROUTING_ADD_TABLE : pushing at level %d", ROUTING_TABLE_ADD_LEVEL);
             return ROUTING_TABLE_ADD_LEVEL;
