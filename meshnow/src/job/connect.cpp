@@ -219,18 +219,22 @@ void ConnectJob::SearchPhase::writeChannelToNVS(uint8_t channel) {
 
 // CONNECT PHASE //
 
+/*
+ * To connect action runs once after transitioning into it.
+ */
 TickType_t ConnectJob::ConnectPhase::nextActionAt() const noexcept {
     if (started_) {
         return portMAX_DELAY;
     }
+    // By retuning 0 it ensures a check against xTaskGetTickCount() causes it to run immediately
     return 0;
 }
 
 void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
-    if (!started_) {
-        ESP_LOGI(TAG, "Starting connect phase");
-        started_ = true;
-    }
+    if (started_) return;
+
+    ESP_LOGI(TAG, "Starting connect phase");
+    started_ = true;
 
     // send a connect request to the best potential parent
 
@@ -256,11 +260,15 @@ void ConnectJob::ConnectPhase::event_handler(ConnectJob &job, event::InternalEve
 
 // RECONNECT PHASE //
 
+/*
+ * To connect action runs once after transitioning into it.
+ */
 TickType_t ConnectJob::ReconnectPhase::nextActionAt() const noexcept {
-    if (!started_) {
-        return 0;
+    if (started_) {
+        return portMAX_DELAY;
     }
-    return portMAX_DELAY;
+    // By retuning 0 it ensures a check against xTaskGetTickCount() causes it to run immediately
+    return 0;
 }
 
 
@@ -289,16 +297,19 @@ void ConnectJob::ReconnectPhase::event_handler(ConnectJob &job, event::InternalE
 // AWAITING CONNECT RESPONSE PHASE //
 
 TickType_t ConnectJob::AwaitingConnectResponsePhase::nextActionAt() const noexcept {
+    if (started_) {
+        return portMAX_DELAY;
+    }
     return request_sent_tick_ + CONNECT_TIMEOUT;
 }
 
 void ConnectJob::AwaitingConnectResponsePhase::performAction(ConnectJob &job) {
     if (started_) return;
-
     started_ = true;
-    ESP_LOGI(TAG, "Connect response timeout fired (%s)",
-             origin_ == RequestOrigin::INITIAL ? "connect" : "reconnect");
+
+    ESP_LOGI(TAG, "Connect response timeout fired (%s)", origin_ == RequestOrigin::INITIAL ? "connect" : "reconnect");
     event::Internal::fire(event::InternalEvent::TIMEOUT_CONNECT_RESPONSE, nullptr, 0);
+}
 
 void ConnectJob::AwaitingConnectResponsePhase::event_handler(ConnectJob &job, event::InternalEvent event,
                                                              void *event_data) {
