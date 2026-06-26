@@ -45,15 +45,40 @@ void StatusSendJob::performAction() {
 void StatusSendJob::sendStatus() {
     ESP_LOGD(TAG, "Sending status beacons to neighbors");
     auto state = state::getState();
+    auto& layout = layout::Layout::get();
+    for (auto& child : layout.getChildren()){
+        packets::Status payload{
+            .state = state,
+            .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
+            #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+            //odd means seq
+            .seq = child.rtt_seq | 1,
+            #endif
+        };
+        #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+        child.rtt_seq += 2;
+        child.last_seen_rtt = xTaskGetTickCount();
+        #endif
+        send::enqueuePayload(payload, send::DirectOnce{child.mac});
+    }
+    if (layout.hasParent()) {
+        auto& parent = layout.getParent();
+        packets::Status payload{
+            .state = state,
+            .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
+            #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+            //odd means seq
+            .seq = parent.rtt_seq | 1,
+            #endif
+        };
+        #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+        parent.rtt_seq += 2;
+        parent.last_seen_rtt = xTaskGetTickCount();
+        #endif
 
-    packets::Status payload{
-        .state = state,
-        .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
-    };
-
-    send::enqueuePayload(payload, send::NeighborsOnce{});
+        send::enqueuePayload(payload, send::DirectOnce{parent.mac});
+    }
 }
-
 // UnreachableTimeoutJob //
 
 TickType_t UnreachableTimeoutJob::nextActionAt() const noexcept {
@@ -73,17 +98,21 @@ void UnreachableTimeoutJob::performAction() {
         // if we haven't lost the parent by now because of a Keep Alive timeout, remove it
         auto& layout = layout::Layout::get();
         if (layout.hasParent()) {
+            auto parent_mac = layout.getParent().mac;
+
             // fire disconnect event
             {
                 meshnow_event_parent_disconnected_t parent_disconnected_event;
-                util::MacAddr& parent_mac = layout::Layout::get().getParent().mac;
                 std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_disconnected_event.parent_mac);
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
 
+            // Send the ConnectEnd packet
+            send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(parent_mac));
+
             layout.removeParent();
-            state::setState(state::State::DISCONNECTED_FROM_PARENT);  // set state to disconnected
+            state::setState(state::State::DISCONNECTED_FROM_PARENT);
         }
     }
 }
@@ -146,9 +175,14 @@ void NeighborCheckJob::performAction() {
 
     // direct children
     for (auto it = layout.getChildren().begin(); it != layout.getChildren().end();) {
-        if (now - it->last_seen > KEEP_ALIVE_TIMEOUT) {
+        #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+        auto timeout = it->rtt_est + 4*it->rtt_dev_est;
+        #else
+        auto timeout = KEEP_ALIVE_TIMEOUT;
+        #endif
+        if (now - it->last_seen > timeout) {
             auto mac = it->mac;
-            ESP_LOGW(TAG, "Direct child " MACSTR " timed out", MAC2STR(mac));
+            ESP_LOGW(TAG, "Direct child " MACSTR " timed out (timeout %lu)", MAC2STR(mac), timeout);
 
             // fire disconnect event
             {
@@ -157,6 +191,9 @@ void NeighborCheckJob::performAction() {
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_DISCONNECTED,
                                &child_disconnected_event, sizeof(child_disconnected_event), portMAX_DELAY);
             }
+            #ifdef CONFIG_USE_CONNECT_END_MESSAGE
+            send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(mac));
+            #endif
 
             layout.removeChild(it->mac);
             // send event upstream
@@ -169,8 +206,13 @@ void NeighborCheckJob::performAction() {
     // parent
     if (layout.hasParent()) {
         auto& parent = layout.getParent();
-        if (now - parent.last_seen > KEEP_ALIVE_TIMEOUT) {
-            ESP_LOGW(TAG, "Parent " MACSTR " timed out", MAC2STR(parent.mac));
+        #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+        auto timeout = parent.rtt_est + 4*parent.rtt_dev_est;
+        #else 
+        auto timeout = KEEP_ALIVE_TIMEOUT;
+        #endif
+        if (now - parent.last_seen > timeout) {
+            ESP_LOGW(TAG, "Parent " MACSTR " timed out (timeout %lu)", MAC2STR(parent.mac), timeout);
 
             // fire disconnect event
             {
@@ -180,6 +222,10 @@ void NeighborCheckJob::performAction() {
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
+            #ifdef CONFIG_USE_CONNECT_END_MESSAGE
+            // Send the ConnectEnd packet
+            send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(parent.mac));
+            #endif
 
             layout.removeParent();
             state::setState(state::State::DISCONNECTED_FROM_PARENT);

@@ -46,6 +46,26 @@ menu "MeshNOW Customization"
             During the search phase, the node keeps track of only a few parents at a time to save memory and speed up the connection process.
             This value determines the maximum number of parents that the node keeps track of. If a better parent is found, the node will replace the worst parent it is tracking.
 
+    config USE_CONNECT_OK_ACK_MESSAGE
+        int "Use connect ok ack message to validate the reception of a connect ok message"
+        default 1
+        help 
+            Use connect ok ack message to validate the reception of a connect ok message. The parent registers the child only when it receives an connect ok ack message.
+            When it receives a connect request, it sends back a connect ok, to which the child respond with a connect ok ack
+    
+    config USE_CONNECT_END_MESSAGE
+        int "Use connect end message"
+        default 1
+        help
+            Sending an end of connection message to tear down a connection rather than waiting for the neighbor to time out.
+
+    config USE_RTT_FOR_TIMEOUT
+        int "Use round-trip-time (RTT) to compute timeout"
+        default 1
+        help
+            Instead of having a hard-threshold time out, use an estimate of the time it takes for two neighbors to communicate. Samples of RTT are computed by changing the behavior of status packets, 
+            so that they can be responded to, and the first and second moments are estimated by using a leaky integrator. The timeout is then specific to each neighbor, and a function of the first 
+            and second moments of the RTT.
     config CONNECT_TIMEOUT
         int "Connection timeout (ms)"
         default 3000
@@ -89,5 +109,100 @@ menu "MeshNOW Customization"
         default 0x01010101
         help
             The IP address of the DNS server that is used for DNS lookups. This value is encoded as a 4-byte hex value.
+
+    config RECEIVER_PRIORITY_QUEUE_LEVELS
+        int "receiver priority queue levels number"
+        default 1
+        help
+            Specify the number of priority levels used in the receiver. If set to 1, then all messages will have the same priority level.
+            Othewise, the level of priority of different types of messages can help processing important messages sooner than less important
+            ones. The priority level of each kind of message can also be set. 
+    
+    config MESSAGES_PER_PRIORITY_LEVEL
+        int "messages per priority level"
+        default 2
+        help
+            This parameter specify the maximum number of messages with priority level i that will processed one after the other until some 
+            message with lower priority is also processed. If MESSAGES_PER_PRIORITY_LEVEL = n, then, for a priority level i, this number 
+            will be (RECEIVER_PRIORITY_QUEUE_LEVELS - i)*n. Hence, the higher the level of priority, the lower this number. This allows 
+            to make less important messages be processed even if the higher levels are used, and thus ensures some fairness.
+    
+    config STATUS_MESSAGE_LEVEL
+        int "status message level"
+        default 0
+        help 
+            Priority level of status messages.
+        
+    config SEARCH_PROBE_MESSAGE_LEVEL
+        int "search probe message level"
+        default 0
+        help 
+            Priority level of search probe messages.
+
+    config SEARCH_REPLY_MESSAGE_LEVEL
+        int "search reply message level"
+        default 0
+        help 
+            Priority level of search reply messages.
+
+    config CONNECT_REQUEST_MESSAGE_LEVEL
+        int "connect request message level"
+        default 0
+        help 
+            Priority level of connecty request messages.
+
+    config CONNECT_OK_MESSAGE_LEVEL
+        int "connect ok message level"
+        default 0
+        help
+            Priority level of connect ok messages.
+
+    config CONNECT_OK_ACK_MESSAGE_LEVEL
+        int "connect ok ack message level"
+        default 0
+        help
+            Priority level of connect ok ack messages.
+    
+    config CONNECT_END_MESSAGE_LEVEL
+        int "connect end message level"
+        default 0
+        help
+            Priority level of connect end messages.
+
+    config ROUTING_TABLE_ADD_MESSAGE_LEVEL
+        int "routing table add message level"
+        default 0
+        help
+            Priority level of routing table add messages.
+
+    config ROUTING_TABLE_REMOVE_MESSAGE_LEVEL
+        int "routing table remove message level"
+        default 0
+        help
+            Priority level of routing table remove messages.
+
+    config ROOT_UNREACHABLE_MESSAGE_LEVEL
+        int "root unreachable message level"
+        default 0
+        help
+            Priority level of root unreachable messages.
+
+    config ROOT_REACHABLE_MESSAGE_LEVEL
+        int "root reachable message level"
+        default 0
+        help
+            Priority level of root reachable messages.
+
+    config DATA_FRAGMENT_MESSAGE_LEVEL
+        int "data fragment message level"
+        default 0
+        help
+            Priority level of data fragment messages.
+
+    config CUSTOM_DATA_MESSAGE_LEVEL
+        int "custom data message level"
+        default 0
+        help
+            Priority level of custom data messages.
 
 endmenu

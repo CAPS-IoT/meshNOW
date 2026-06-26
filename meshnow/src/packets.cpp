@@ -106,12 +106,22 @@ static void serialize(S& s, Status& p) {
     s.value1b(p.state);
     // TODO optimize with custom extension
     s.ext(p.root, bitsery::ext::StdOptional{});
+    #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+    s.value4b(p.seq);
+    #endif
 }
 
 template <typename S>
 static void serialize(S&, SearchProbe&) {
     // no data
 }
+#ifdef CONFIG_USE_CONNECT_END_MESSAGE
+template <typename S>
+static void serialize(S&, ConnectEnd&) {
+    // no data
+}
+#endif
+
 
 template <typename S>
 static void serialize(S&, SearchReply&) {
@@ -127,6 +137,12 @@ template <typename S>
 static void serialize(S& s, ConnectOk& p) {
     s.object(p.root);
 }
+#ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
+template <typename S>
+static void serialize(S&, ConnectOkAck&) {
+    //no data
+}
+#endif
 
 template <typename S>
 static void serialize(S& s, RoutingTableAdd& p) {

@@ -26,6 +26,12 @@ struct Node {
 struct Neighbor : Node {
     using Node::Node;
     TickType_t last_seen{xTaskGetTickCount()};
+    #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+    TickType_t last_seen_rtt{0};
+    TickType_t rtt_est{pdMS_TO_TICKS(CONFIG_KEEP_ALIVE_TIMEOUT)};
+    TickType_t rtt_dev_est{0};
+    uint32_t rtt_seq{0};
+    #endif
 };
 
 struct Child : Neighbor {
