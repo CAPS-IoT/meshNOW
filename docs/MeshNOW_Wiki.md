@@ -1,3 +1,6 @@
+> This wiki was AI-generated and reviewed by the IoT Praktikum team.
+> If you spot an error or outdated information, please open an issue or submit a PR.
+
 # MeshNOW Codebase Architecture Wiki
 
 Welcome to the **MeshNOW Architecture Wiki**! This document has been written specifically for **junior developers**, **new team members**, and **contributors** to help you understand the internal mechanics, file structure, and design principles of the MeshNOW library.
@@ -63,7 +66,7 @@ Standard Wi-Fi relies on an Access Point (AP) to route all station (STA) traffic
 Unlike a flat, peer-to-peer mesh where every node can talk directly to any neighbor, MeshNOW is organized as a **Hierarchical Tree**.
 
 1. **The Root Node:** 
-   * Configured via `meshnow_config_t::root = true`. -- hallucination!
+   * Configured via `meshnow_config_t::root = true`. (struct in src/include/meshnow.h)
    * Serves as the origin of the mesh tree.
    * Can optionally connect to a Wi-Fi router using standard Wi-Fi station mode (`router_config.should_connect = true`).
    * Manages the global IP subnet (provides standard DHCP-like IP allocations virtually to the rest of the mesh).
