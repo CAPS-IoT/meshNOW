@@ -172,22 +172,70 @@ Jobs are asynchronous, periodic tasks orchestrated by a unified scheduler.
 To modify or debug the mesh, you need to understand the main data flows:
 
 ### Discovery & Connection (The Join Flow)
-When a non-root node starts, it is in `DISCONNECTED_FROM_PARENT`. It runs `ConnectJob` to find a parent:
+
+When a non-root node starts, it is in `DISCONNECTED_FROM_PARENT`. It runs `ConnectJob`, which is a multi-phase state machine implemented as a `std::variant` in `connect.cpp`:
+
+```
++---------------------------+
+|       Search Phase        |  Broadcasts SearchProbe on all channels, collects
+|                           |  parent candidates ranked by RSSI. Saves the
+|                           |  discovered channel to NVS for faster next boot.
++---------------------------+
+             |
+             | First parent found + FIRST_PARENT_WAIT elapsed
+             v
++---------------------------+
+|       Connect Phase       |  Picks the best candidate by RSSI,
+|                           |  sends ConnectRequest to that parent.
++---------------------------+
+             |
+             | ConnectRequest sent
+             v
++---------------------------+
+| AwaitingConnectResponse   |  Waits up to CONNECT_TIMEOUT for a ConnectOk.
+|        Phase              |  On timeout fires TIMEOUT_CONNECT_RESPONSE:
+|                           |   - if initial attempt  → back to Connect Phase
+|                           |   - if reconnect attempt → back to Reconnect Phase
++---------------------------+
+             |
+             | ConnectOk received (carries root MAC + RSSI)
+             v
++---------------------------+
+|        Done Phase         |  Sets parent in Layout, updates state to
+|                           |  REACHES_ROOT, fires MESHNOW_EVENT_PARENT_CONNECTED.
+|                           |  Idles here, listening for STATE_CHANGED.
++---------------------------+
+             |
+             | STATE_CHANGED → DISCONNECTED_FROM_PARENT
+             v
++---------------------------+
+|      Reconnect Phase      |  Retries the same parent up to RECONNECT_ATTEMPTS
+|                           |  times before falling back to Search Phase.
++---------------------------+
+             |
+             | Attempts exhausted
+             v
++---------------------------+
+|       Search Phase        |  Full restart of parent discovery.
++---------------------------+
+```
+
+On the wire, the handshake looks like this:
 
 ```
 Disconnected Node                        Potential Parent Nodes (Active)
        |                                              |
-       | ----- [SearchProbe Broadcast] -------------> |  (Fires on all 11 Wi-Fi channels)
+       | ----- [SearchProbe Broadcast] -------------> |  (Fires on all Wi-Fi channels)
        |                                              |
        | <---- [SearchReply (RSSI details)] --------- |  (Candidates respond with parent capacity)
        |                                              |
-[Select Best Candidate]                               |
+[Select Best Candidate by RSSI]                       |
        |                                              |
        | ----- [ConnectRequest] --------------------> |  (Handshake attempt to the best parent)
        |                                              |
        | <---- [ConnectOk (Root MAC & State Info)] -- |  (Handshake successful!)
        v                                              v
-[Transition to CONNECTED]
+[Transition to REACHES_ROOT]
 [Send RoutingTableAdd upstream]
 ```
 
