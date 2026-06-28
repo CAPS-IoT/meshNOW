@@ -135,7 +135,7 @@ Jobs are asynchronous, periodic tasks orchestrated by a unified scheduler.
 * **`runner.cpp` / `runner.hpp`**
   The master FreeRTOS task runner (`job_runner_task`) that executes pending jobs.
 * **`connect.cpp` / `connect.hpp`**
-  The crucial Mesh Join Job. Implements the two-phase state machine: **Search Phase** (scanning channels and comparing parent candidates via RSSI) and **Connect Phase** (direct handshakes with the chosen parent).
+  The crucial Mesh Join Job. Implements a multi-phase state machine: **Search Phase** (scanning channels and comparing parent candidates via RSSI), **Connect Phase** (handshake with the best parent), **Awaiting Connect Response Phase** (timeout guard), **Reconnect Phase** (retry the same parent before giving up), and **Done Phase** (idle, watches for disconnection).
 * **`keep_alive.cpp` / `keep_alive.hpp`**
   Fires periodic status beacons (`Status` packets) and monitors neighbor timeouts. If a parent is silent for too long, it triggers a disconnect event.
 * **`packet_handler.cpp` / `packet_handler.hpp`**
@@ -310,7 +310,8 @@ You can customize the mesh performance in your ESP-IDF project configuration (`m
 | `CONFIG_PROBES_PER_CHANNEL` | `3` | Number of probe packets sent per channel before switching during discovery. |
 | `CONFIG_FIRST_PARENT_WAIT` | `3000` | Wait time (ms) after finding the first candidate before completing selection (allows gathering multiple potential parents). |
 | `CONFIG_MAX_PARENTS_TO_CONSIDER` | `5` | Size of parent candidate list to evaluate and select from. |
-| `CONFIG_CONNECT_TIMEOUT` | `3000` | Handshake response timeout (ms) before aborting and retrying search. |
+| `CONFIG_CONNECT_TIMEOUT` | `3000` | Handshake response timeout (ms) before aborting and retrying. |
+| `CONFIG_RECONNECT_ATTEMPTS` | *(see Kconfig.projbuild)* | How many times to retry the same parent in Reconnect Phase before falling back to a full Search Phase. |
 | `CONFIG_STATUS_SEND_INTERVAL` | `500` | Keepalive heartbeat beacon interval (ms) sent to parent and children. |
 | `CONFIG_KEEP_ALIVE_TIMEOUT` | `3000` | Time (ms) without receiving status packets before declaring a neighbor dead. |
 | `CONFIG_ROOT_UNREACHABLE_TIMEOUT`| `10000` | Time (ms) a node stays in degraded status (connected to parent but root unreachable) before forcing a full disconnect. |
