@@ -15,6 +15,7 @@ enum class InternalEvent : int32_t {
     STATE_CHANGED,
     PARENT_FOUND,
     GOT_CONNECT_RESPONSE,
+    TIMEOUT_CONNECT_RESPONSE
 };
 
 struct StateChangedEvent {
@@ -30,6 +31,7 @@ struct ParentFoundData {
 struct GotConnectResponseData {
     const util::MacAddr parent;
     const util::MacAddr root;
+    const int rssi;
 };
 
 class Internal {

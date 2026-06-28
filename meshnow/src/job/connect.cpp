@@ -33,6 +33,9 @@ constexpr auto MAX_PARENTS_TO_CONSIDER = CONFIG_MAX_PARENTS_TO_CONSIDER;
 // Time to wait for a connection reply
 constexpr auto CONNECT_TIMEOUT = pdMS_TO_TICKS(CONFIG_CONNECT_TIMEOUT);
 
+// How many times to retry connecting to the same parent before giving up and going back to searching
+constexpr auto RECONNECT_ATTEMPTS = CONFIG_RECONNECT_ATTEMPTS;
+
 }  // namespace
 
 namespace meshnow::job {
@@ -77,6 +80,7 @@ void ConnectJob::event_handler(void *event_handler_arg, esp_event_base_t event_b
     std::visit([&](auto &phase) { phase.event_handler(job, static_cast<event::InternalEvent>(event_id), event_data); },
                job.phase_);
 }
+
 
 // SEARCH PHASE //
 
@@ -212,28 +216,25 @@ void ConnectJob::SearchPhase::writeChannelToNVS(uint8_t channel) {
     nvs_close(nvs_handle);
 }
 
+
 // CONNECT PHASE //
 
+/*
+ * To connect action runs once after transitioning into it.
+ */
 TickType_t ConnectJob::ConnectPhase::nextActionAt() const noexcept {
-    if (!started_) return 0;
-
-    if (!awaiting_connect_response_) {
-        return 0;
-    } else {
-        return last_connect_request_time_ + CONNECT_TIMEOUT;
+    if (started_) {
+        return portMAX_DELAY;
     }
+    // By retuning 0 it ensures a check against xTaskGetTickCount() causes it to run immediately
+    return 0;
 }
 
 void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
-    if (!started_) {
-        ESP_LOGI(TAG, "Starting connect phase");
-        started_ = true;
-    }
+    if (started_) return;
 
-    if (awaiting_connect_response_) {
-        ESP_LOGI(TAG, "Connect request timed out");
-        awaiting_connect_response_ = false;
-    }
+    ESP_LOGI(TAG, "Starting connect phase");
+    started_ = true;
 
     // send a connect request to the best potential parent
 
@@ -246,60 +247,128 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
         return;
     }
 
-    current_parent_mac_ = it->mac_addr;
-    current_parent_rssi_ = it->rssi;
+    ESP_LOGI(TAG, "Sending connect request to " MACSTR, MAC2STR(it->mac_addr));
+    send::enqueuePayload(packets::ConnectRequest{}, send::DirectOnce(it->mac_addr));
+    job.phase_ = AwaitingConnectResponsePhase(xTaskGetTickCount(), it->mac_addr, RequestOrigin::INITIAL);
+
     job.parent_infos_.erase(it);
-
-    awaiting_connect_response_ = true;
-    last_connect_request_time_ = xTaskGetTickCount();
-    sendConnectRequest(current_parent_mac_);
 }
 
-void ConnectJob::ConnectPhase::event_handler(ConnectJob &job, event::InternalEvent event, void *event_data) {
-    if (event != event::InternalEvent::GOT_CONNECT_RESPONSE) return;
+// no-op
+void ConnectJob::ConnectPhase::event_handler(ConnectJob &job, event::InternalEvent event, void *event_data) {}
 
-    auto &response_data = *static_cast<event::GotConnectResponseData *>(event_data);
-    auto parent_mac = response_data.parent;
 
-    // got a wrong connection response
-    if (parent_mac != current_parent_mac_) return;
+// RECONNECT PHASE //
 
-    // got a correct connection response
-    ESP_LOGI(TAG, "Got accepted by " MACSTR, MAC2STR(parent_mac));
-    awaiting_connect_response_ = false;
-
-    // we are now connected to the parent
-    // set parent info
-    auto &layout = layout::Layout::get();
-    layout.setParent(parent_mac);
-
-    // set root mac
-    state::setRootMac(response_data.root);
-
-    // update the state
-    // we can assume to immediately reach the root since the parent also has to reach the root
-    state::setState(state::State::REACHES_ROOT);
-
-    // fire connect event
-    {
-        meshnow_event_parent_connected_t parent_connected_event;
-        // printf("Connection strength is %d\n", current_parent_rssi_);
-        parent_connected_event.parent_rssi = current_parent_rssi_;
-        std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_connected_event.parent_mac);
-        esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_CONNECTED, &parent_connected_event,
-                       sizeof(parent_connected_event), portMAX_DELAY);
+/*
+ * To connect action runs once after transitioning into it.
+ */
+TickType_t ConnectJob::ReconnectPhase::nextActionAt() const noexcept {
+    if (started_) {
+        return portMAX_DELAY;
     }
-
-    // we now want to perform the reset
-    job.phase_ = DonePhase{};
+    // By retuning 0 it ensures a check against xTaskGetTickCount() causes it to run immediately
+    return 0;
 }
 
-void ConnectJob::ConnectPhase::sendConnectRequest(const util::MacAddr &to_mac) {
-    ESP_LOGI(TAG, "Sending connect request to " MACSTR, MAC2STR(to_mac));
-    send::enqueuePayload(packets::ConnectRequest{}, send::DirectOnce(to_mac));
+
+void ConnectJob::ReconnectPhase::performAction(ConnectJob &job) {
+    if (started_) return;
+    started_ = true;
+
+    if (job.reconnect_attempts_ >= RECONNECT_ATTEMPTS) {
+        ESP_LOGI(TAG, "Reconnect attempts exhausted, going back to search phase");
+        job.phase_ = SearchPhase{job.channel_config_};
+        job.reconnect_attempts_ = 0;
+        return;
+    }
+    job.reconnect_attempts_++;
+
+    // send a connect request to the current parent
+    ESP_LOGI(TAG, "Attempting reconnect to " MACSTR " (Attempt %d)",
+             MAC2STR(current_parent_mac_), job.reconnect_attempts_);
+    send::enqueuePayload(packets::ConnectRequest{}, send::DirectOnce(current_parent_mac_));
+    job.phase_ = AwaitingConnectResponsePhase(xTaskGetTickCount(), current_parent_mac_, RequestOrigin::RECONNECT);
 }
 
-// DonePhase //
+// no-op
+void ConnectJob::ReconnectPhase::event_handler(ConnectJob &job, event::InternalEvent event, void *event_data) {  }
+
+// AWAITING CONNECT RESPONSE PHASE //
+
+TickType_t ConnectJob::AwaitingConnectResponsePhase::nextActionAt() const noexcept {
+    if (started_) {
+        return portMAX_DELAY;
+    }
+    return request_sent_tick_ + CONNECT_TIMEOUT;
+}
+
+void ConnectJob::AwaitingConnectResponsePhase::performAction(ConnectJob &job) {
+    if (started_) return;
+    started_ = true;
+
+    ESP_LOGI(TAG, "Connect response timeout fired (%s)", origin_ == RequestOrigin::INITIAL ? "connect" : "reconnect");
+    event::Internal::fire(event::InternalEvent::TIMEOUT_CONNECT_RESPONSE, nullptr, 0);
+}
+
+void ConnectJob::AwaitingConnectResponsePhase::event_handler(ConnectJob &job, event::InternalEvent event,
+                                                             void *event_data) {
+    switch (event) {
+        case event::InternalEvent::TIMEOUT_CONNECT_RESPONSE:
+            if (origin_ == RequestOrigin::INITIAL) {
+                job.phase_ = ConnectPhase{};
+            } else {
+                job.phase_ = ReconnectPhase{current_parent_mac_};
+            }
+            break;
+        case event::InternalEvent::GOT_CONNECT_RESPONSE: {
+            auto &response_data = *static_cast<event::GotConnectResponseData *>(event_data);
+            auto parent_mac = response_data.parent;
+
+            // got a wrong connection response
+            if (parent_mac != current_parent_mac_) return;
+
+            // got a correct connection response
+            ESP_LOGI(TAG, "Got accepted by " MACSTR, MAC2STR(parent_mac));
+
+            // we are now connected to the parent
+            // set parent info
+            auto &layout = layout::Layout::get();
+            layout.setParent(parent_mac);
+
+            // set root mac
+            state::setRootMac(response_data.root);
+
+            // update the state
+            // we can assume to immediately reach the root since the parent also has to reach the root
+            state::setState(state::State::REACHES_ROOT);
+
+            // fire connect event
+            {
+                meshnow_event_parent_connected_t parent_connected_event;
+                parent_connected_event.parent_rssi = response_data.rssi;
+                std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_connected_event.parent_mac);
+                esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_CONNECTED, &parent_connected_event,
+                               sizeof(parent_connected_event), portMAX_DELAY);
+            }
+
+            //add last seen parent
+            auto& parent = layout.getParent();
+            parent.last_seen = xTaskGetTickCount();
+
+            // we now want to perform the reset
+            job.reconnect_attempts_ = 0;
+            job.phase_ = DonePhase{current_parent_mac_};
+            break;
+        }
+        default:
+            ESP_LOGI(TAG, "Ignoring event %d in AwaitingConnectResponsePhase", static_cast<int>(event));
+            break;
+    }
+}
+
+
+// DONE PHASE //
 
 TickType_t ConnectJob::DonePhase::nextActionAt() const noexcept {
     if (!started_) {
@@ -327,7 +396,7 @@ void ConnectJob::DonePhase::event_handler(meshnow::job::ConnectJob &job, event::
     ESP_LOGI(TAG, "new State: %d", static_cast<uint8_t>(state_change.new_state));
 
     if (state_change.new_state == state::State::DISCONNECTED_FROM_PARENT) {
-        job.phase_ = SearchPhase{job.channel_config_};
+        job.phase_ = ReconnectPhase{current_parent_mac_};
     }
 }
 

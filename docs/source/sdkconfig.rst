@@ -54,6 +54,12 @@ This value determines the time in milliseconds that the node waits for a reply b
 
 **Default value:** ``3000``
 
+CONFIG_RECONNECT_ATTEMPTS
+""""""""""""""""""""
+If a node fails to connect to a parent, it will retry connecting to the same parent a few times before giving up and going back to searching for new parents.
+This value determines the number of reconnect attempts.
+
+**Default value:** ``3``
 
 Keep Alive
 ^^^^^^^^^^
