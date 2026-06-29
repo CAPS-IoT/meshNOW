@@ -4,6 +4,7 @@
 #include <freertos/semphr.h>
 #include <sdkconfig.h>
 
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <vector>
@@ -26,6 +27,7 @@ struct Node {
 struct Neighbor : Node {
     using Node::Node;
     TickType_t last_seen{xTaskGetTickCount()};
+    uint16_t send_after{60};
     #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
     TickType_t last_seen_rtt{0};
     TickType_t rtt_est{pdMS_TO_TICKS(CONFIG_KEEP_ALIVE_TIMEOUT)};

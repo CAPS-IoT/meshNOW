@@ -204,8 +204,32 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
         neigh->rtt_dev_est = ((neigh->rtt_dev_est * 3) + rtt_dev_sample)/4;
         neigh->rtt_dev_est = neigh->rtt_dev_est == 0 ? 1 : neigh->rtt_est;
         ESP_LOGV(TAG, "new rtt sample %d, rtt estimate %d and rtt dev estimate %dcode ", rtt_sample, neigh->rtt_est, neigh->rtt_dev_est);
+        // fire data event
+        if (--neigh->send_after == 0) {
+            neigh->send_after == 60;
+            meshnow_event_connection_data_t connection_data_event;
+            std::copy(meta.from.addr.begin(), meta.from.addr.end(), connection_data_event.neigh_mac);
+            connection_data_event.neigh_rssi = meta.rssi;
+            connection_data_event.last_seen = neigh->last_seen;
+            connection_data_event.rtt_est = neigh->rtt_est;
+            connection_data_event.rtt_dev_est = neigh->rtt_dev_est;
+            connection_data_event.rtt_sample = rtt_sample;
+            esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CONNECTION_DATA, &connection_data_event,
+                        sizeof(connection_data_event), portMAX_DELAY);
+        }
     }
     return;
+    #else
+    // fire data event
+    if (--neigh->send_after == 0){
+        neigh->send_after = 60;
+        meshnow_event_connection_data_t connection_data_event;
+        std::copy(meta.from.addr.begin(), meta.from.addr.end(), connection_data_event.neigh_mac);
+        connection_data_event.neigh_rssi = meta.rssi;
+        connection_data_event.last_seen = neigh->last_seen;
+        esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CONNECTION_DATA, &connection_data_event,
+                    sizeof(connection_data_event), portMAX_DELAY);
+    }
     #endif
 }
 

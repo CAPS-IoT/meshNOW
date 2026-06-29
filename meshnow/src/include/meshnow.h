@@ -47,6 +47,11 @@ typedef enum {
      * This node has disconnected from a parent.
      */
     MESHNOW_EVENT_PARENT_DISCONNECTED,
+
+    /**
+     * Data about the goodness of the connection with a neighbor
+     */
+    MESHNOW_EVENT_CONNECTION_DATA,
 } meshnow_event_t;
 
 /**
@@ -90,6 +95,23 @@ typedef struct {
      */
     meshnow_addr_t parent_mac;
 } meshnow_event_parent_disconnected_t;
+
+/**
+ * connection data information
+ */
+typedef struct {
+    /**
+     * MAC address of the neighbor with whome the conection data is from
+     */
+    meshnow_addr_t neigh_mac;
+    int neigh_rssi;
+    TickType_t last_seen;
+    #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+    TickType_t rtt_est;
+    TickType_t rtt_dev_est;
+    TickType_t rtt_sample; 
+    #endif
+} meshnow_event_connection_data_t;
 
 /**
  * Configuration options for the root when connecting to a router.
