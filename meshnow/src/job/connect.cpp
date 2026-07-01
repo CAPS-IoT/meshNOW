@@ -36,6 +36,9 @@ constexpr auto CONNECT_TIMEOUT = pdMS_TO_TICKS(CONFIG_CONNECT_TIMEOUT);
 // How many times to retry connecting to the same parent before giving up and going back to searching
 constexpr auto RECONNECT_ATTEMPTS = CONFIG_RECONNECT_ATTEMPTS;
 
+// How many times to retry connecting to the preferred parent before giving up and going back to searching (ultimative stickiness)
+constexpr auto PREFERRED_PARENT_ATTEMPTS = 3;
+
 }  // namespace
 
 namespace meshnow::job {
@@ -217,6 +220,31 @@ void ConnectJob::SearchPhase::writeChannelToNVS(uint8_t channel) {
 }
 
 
+uint8_t ConnectJob::SearchPhase::readPreferredParentFromNVS(const ChannelConfig &channel_config) {
+    nvs_handle_t nvs_handle;
+    ESP_ERROR_CHECK(nvs_open("meshnow", NVS_READONLY, &nvs_handle));
+
+    util::MacAddr mac;
+    size_t len = mac.addr.size();
+    esp_err_t ret = nvs_get_blob(nvs_handle, "last_parent", mac.addr.data(), &len);
+
+    nvs_close(nvs_handle);
+
+    return mac;
+}
+
+void ConnectJob::SearchPhase::writePreferredParentToNVS(uint8_t channel) {
+    nvs_handle_t nvs_handle;
+    ESP_ERROR_CHECK(nvs_open("meshnow", NVS_READWRITE, &nvs_handle));
+
+    ESP_ERROR_CHECK(nvs_set_u8(nvs_handle, "preferred_parent", channel));
+
+    ESP_ERROR_CHECK(nvs_commit(nvs_handle));
+
+    nvs_close(nvs_handle);
+}
+
+
 // CONNECT PHASE //
 
 /*
@@ -237,6 +265,18 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
     started_ = true;
 
     // send a connect request to the best potential parent
+
+    // send connect request to the preferred parent for the total stickiness
+    if (job.preferred_parent_mac_ && job.preferred_parent_attempts_ < MAX_PREFERRED_PARENT_ATTEMPTS) {
+        it = std::find_if(job.parent_infos_.begin(), job.parent_infos_.end(), [&](const ParentInfo &p) {
+            return p.mac_addr == *job.preferred_parent_mac_;
+        });
+        if (it != job.parent_infos_.end()) {
+            job.preferred_parent_attempts_++;
+            ESP_LOGI(TAG, "Preferring previous parent " MACSTR " (attempt %d/%d)", MAC2STR(it->mac_addr),
+                     job.preferred_parent_attempts_, MAX_PREFERRED_PARENT_ATTEMPTS);
+        }
+    }
 
     // get best parent
     auto it = std::max_element(job.parent_infos_.begin(), job.parent_infos_.end(),
@@ -342,6 +382,9 @@ void ConnectJob::AwaitingConnectResponsePhase::event_handler(ConnectJob &job, ev
             // update the state
             // we can assume to immediately reach the root since the parent also has to reach the root
             state::setState(state::State::REACHES_ROOT);
+
+            // remember this parent so we prefer reconnecting to it after a reboot
+            ConnectJob::writePreferredParentToNVS(parent_mac);
 
             // fire connect event
             {

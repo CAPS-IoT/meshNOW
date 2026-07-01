@@ -22,7 +22,12 @@ class ConnectJob : public Job {
 
     void performAction() override;
 
+    static void writePreferredParentToNVS(const util::MacAddr& mac);
+
    private:
+
+   static std::optional<util::MacAddr> readPreferredParentFromNVS();
+   
     struct ChannelConfig {
         uint8_t min_channel;
         uint8_t max_channel;
