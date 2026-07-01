@@ -54,6 +54,7 @@ ConnectJob::ConnectJob()
           return ChannelConfig{min_channel, max_channel};
       }()) {
     parent_infos_.reserve(MAX_PARENTS_TO_CONSIDER);
+    preferred_parent_mac_ = ConnectJob::readPreferredParentFromNVS();
 }
 
 TickType_t ConnectJob::nextActionAt() const noexcept {
@@ -220,24 +221,28 @@ void ConnectJob::SearchPhase::writeChannelToNVS(uint8_t channel) {
 }
 
 
-uint8_t ConnectJob::SearchPhase::readPreferredParentFromNVS(const ChannelConfig &channel_config) {
+std::optional<util::MacAddr> ConnectJob::readPreferredParentFromNVS() {
     nvs_handle_t nvs_handle;
-    ESP_ERROR_CHECK(nvs_open("meshnow", NVS_READONLY, &nvs_handle));
+    esp_err_t open_err = nvs_open("meshnow", NVS_READONLY, &nvs_handle);
+    if (open_err != ESP_OK) return std::nullopt;
 
     util::MacAddr mac;
     size_t len = mac.addr.size();
-    esp_err_t ret = nvs_get_blob(nvs_handle, "last_parent", mac.addr.data(), &len);
+    esp_err_t ret = nvs_get_blob(nvs_handle, "pref_parent", mac.addr.data(), &len);
 
     nvs_close(nvs_handle);
 
-    return mac;
+    if (ret == ESP_OK) {
+        return mac;
+    }
+    return std::nullopt;
 }
 
-void ConnectJob::SearchPhase::writePreferredParentToNVS(uint8_t channel) {
+void ConnectJob::writePreferredParentToNVS(const util::MacAddr &mac) {
     nvs_handle_t nvs_handle;
     ESP_ERROR_CHECK(nvs_open("meshnow", NVS_READWRITE, &nvs_handle));
 
-    ESP_ERROR_CHECK(nvs_set_u8(nvs_handle, "preferred_parent", channel));
+    ESP_ERROR_CHECK(nvs_set_blob(nvs_handle, "pref_parent", mac.addr.data(), mac.addr.size()));
 
     ESP_ERROR_CHECK(nvs_commit(nvs_handle));
 
@@ -265,22 +270,26 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
     started_ = true;
 
     // send a connect request to the best potential parent
-
+    auto it = job.parent_infos_.end();
     // send connect request to the preferred parent for the total stickiness
-    if (job.preferred_parent_mac_ && job.preferred_parent_attempts_ < MAX_PREFERRED_PARENT_ATTEMPTS) {
+    if (job.preferred_parent_mac_ && job.preferred_parent_attempts_ < PREFERRED_PARENT_ATTEMPTS) {
         it = std::find_if(job.parent_infos_.begin(), job.parent_infos_.end(), [&](const ParentInfo &p) {
             return p.mac_addr == *job.preferred_parent_mac_;
         });
         if (it != job.parent_infos_.end()) {
             job.preferred_parent_attempts_++;
             ESP_LOGI(TAG, "Preferring previous parent " MACSTR " (attempt %d/%d)", MAC2STR(it->mac_addr),
-                     job.preferred_parent_attempts_, MAX_PREFERRED_PARENT_ATTEMPTS);
+                     job.preferred_parent_attempts_, PREFERRED_PARENT_ATTEMPTS);
         }
     }
 
     // get best parent
-    auto it = std::max_element(job.parent_infos_.begin(), job.parent_infos_.end(),
+
+if (it == job.parent_infos_.end() && !job.parent_infos_.empty()) {
+    it = std::max_element(job.parent_infos_.begin(), job.parent_infos_.end(),
                                [](const ParentInfo &a, const ParentInfo &b) { return a.rssi < b.rssi; });
+}
+   
     if (it == job.parent_infos_.end()) {
         ESP_LOGI(TAG, "All parents exhausted");
         job.phase_ = SearchPhase{job.channel_config_};

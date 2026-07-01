@@ -23,10 +23,9 @@ class ConnectJob : public Job {
     void performAction() override;
 
     static void writePreferredParentToNVS(const util::MacAddr& mac);
+    static std::optional<util::MacAddr> readPreferredParentFromNVS();
 
    private:
-
-   static std::optional<util::MacAddr> readPreferredParentFromNVS();
    
     struct ChannelConfig {
         uint8_t min_channel;
@@ -37,6 +36,9 @@ class ConnectJob : public Job {
         util::MacAddr mac_addr;
         int rssi{0};
     };
+
+    std::optional<util::MacAddr> preferred_parent_mac_;
+    uint8_t preferred_parent_attempts_{0};
 
     /**
      * Searches for potential parents by performing an all-channel scan
