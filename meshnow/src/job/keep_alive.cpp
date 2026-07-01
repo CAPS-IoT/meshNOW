@@ -189,7 +189,7 @@ void NeighborCheckJob::performAction() {
             {
                 meshnow_event_child_disconnected_t child_disconnected_event;
                 std::copy(mac.addr.begin(), mac.addr.end(), child_disconnected_event.child_mac);
-                child_disconnected_event.reason = DISCONNECT_REASON_TIME_OUT:
+                child_disconnected_event.reason = DISCONNECT_REASON_TIME_OUT;
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_DISCONNECTED,
                                &child_disconnected_event, sizeof(child_disconnected_event), portMAX_DELAY);
             }
@@ -221,7 +221,7 @@ void NeighborCheckJob::performAction() {
                 meshnow_event_parent_disconnected_t parent_disconnected_event;
                 util::MacAddr& parent_mac = layout::Layout::get().getParent().mac;
                 std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), parent_disconnected_event.parent_mac);
-                parent_disconnected_event.reason = DISCONNECT_REASON_TIME_OUT:
+                parent_disconnected_event.reason = DISCONNECT_REASON_TIME_OUT;
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
