@@ -233,6 +233,7 @@ std::optional<util::MacAddr> ConnectJob::readPreferredParentFromNVS() {
     nvs_close(nvs_handle);
 
     if (ret == ESP_OK) {
+        printf("Read preferred parent from NVS: " MACSTR "\n", MAC2STR(mac));
         return mac;
     }
     return std::nullopt;
@@ -269,9 +270,9 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
     ESP_LOGI(TAG, "Starting connect phase");
     started_ = true;
 
-    // send a connect request to the best potential parent
     auto it = job.parent_infos_.end();
-    // send connect request to the preferred parent for the total stickiness
+
+    // 1. Try to find and use the preferred parent first
     if (job.preferred_parent_mac_ && job.preferred_parent_attempts_ < PREFERRED_PARENT_ATTEMPTS) {
         it = std::find_if(job.parent_infos_.begin(), job.parent_infos_.end(), [&](const ParentInfo &p) {
             return p.mac_addr == *job.preferred_parent_mac_;
@@ -280,15 +281,21 @@ void ConnectJob::ConnectPhase::performAction(ConnectJob &job) {
             job.preferred_parent_attempts_++;
             ESP_LOGI(TAG, "Preferring previous parent " MACSTR " (attempt %d/%d)", MAC2STR(it->mac_addr),
                      job.preferred_parent_attempts_, PREFERRED_PARENT_ATTEMPTS);
+            // We found it! Skip the RSSI fallback check below.
         }
     }
 
-    // get best parent
+    // 2. Fallback to the best RSSI parent ONLY if we didn't find the preferred one
+    if (it == job.parent_infos_.end()) {
+        // Since we didn't find/use the preferred parent, reset its attempts 
+        // so it can be tried fresh during the next total search cycle.
+        job.preferred_parent_attempts_ = 0; 
 
-if (it == job.parent_infos_.end() && !job.parent_infos_.empty()) {
-    it = std::max_element(job.parent_infos_.begin(), job.parent_infos_.end(),
-                               [](const ParentInfo &a, const ParentInfo &b) { return a.rssi < b.rssi; });
-}
+        if (!job.parent_infos_.empty()) {
+            it = std::max_element(job.parent_infos_.begin(), job.parent_infos_.end(),
+                                    [](const ParentInfo &a, const ParentInfo &b) { return a.rssi < b.rssi; });
+        }
+    }
    
     if (it == job.parent_infos_.end()) {
         ESP_LOGI(TAG, "All parents exhausted");
@@ -296,6 +303,7 @@ if (it == job.parent_infos_.end() && !job.parent_infos_.empty()) {
         return;
     }
 
+    // 3. Send and erase (Now safe because 'it' points to the actual intended target)
     ESP_LOGI(TAG, "Sending connect request to " MACSTR, MAC2STR(it->mac_addr));
     send::enqueuePayload(packets::ConnectRequest{}, send::DirectOnce(it->mac_addr));
     job.phase_ = AwaitingConnectResponsePhase(xTaskGetTickCount(), it->mac_addr, RequestOrigin::INITIAL);
