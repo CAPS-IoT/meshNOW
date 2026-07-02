@@ -174,6 +174,15 @@ void ConnectJob::SearchPhase::event_handler(ConnectJob &job, event::InternalEven
             parent_infos.push_back(ParentInfo{parent_mac, parent_rssi});
         }
     }
+
+    meshnow_event_potential_parent_found_t potential_parent_found_event;
+    potential_parent_found_event.parent_rssi = parent_rssi;
+    std::copy(parent_mac.addr.begin(), parent_mac.addr.end(), potential_parent_found_event.parent_mac);
+    esp_event_post(MESHNOW_EVENT,
+                   MESHNOW_EVENT_POTENTIAL_PARENT_FOUND,
+                   &potential_parent_found_event,
+                   sizeof(potential_parent_found_event),
+                   portMAX_DELAY);
 }
 
 void ConnectJob::SearchPhase::sendSearchProbe() {
