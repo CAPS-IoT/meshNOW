@@ -50,6 +50,26 @@ typedef enum {
 } meshnow_event_t;
 
 /**
+ * Reason for the disconnection
+ */
+typedef enum {
+    /**
+     * The neighbor timed out 
+     */
+    DISCONNECT_REASON_TIME_OUT,
+
+    /**
+     * The parent has no acces to the root since too long
+     */
+    DISCONNECT_REASON_ROOT_UNREACHABLE,
+
+    /**
+     * The neighbor sent a connect_end message
+     */
+    DISCONNECT_REASON_CONNECT_END_MESSAGE,
+} meshnow_event_disconnected_reason_t;
+
+/**
  * Child connected information.
  */
 typedef struct {
@@ -67,6 +87,10 @@ typedef struct {
      * MAC address of the disconnected child.
      */
     meshnow_addr_t child_mac;
+    /**
+     * Disconnection reason
+     */
+    meshnow_event_disconnected_reason_t reason;
 } meshnow_event_child_disconnected_t;
 
 /**
@@ -89,6 +113,10 @@ typedef struct {
      * MAC address of the parent from which this node disconnected.
      */
     meshnow_addr_t parent_mac;
+    /**
+     * Disconnection reason
+     */
+    meshnow_event_disconnected_reason_t reason;
 } meshnow_event_parent_disconnected_t;
 
 /**
