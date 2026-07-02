@@ -108,10 +108,10 @@ void UnreachableTimeoutJob::performAction() {
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
-
+            #if CONFIG_USE_CONNECT_END_MESSAGE
             // Send the ConnectEnd packet
             send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(parent_mac));
-
+            #endif
             layout.removeParent();
             state::setState(state::State::DISCONNECTED_FROM_PARENT);
         }
