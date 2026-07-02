@@ -282,24 +282,7 @@ When an application (like MQTT) sends a large TCP/IP packet:
 
 ---
 
-## 6. Threading & Concurrency Model
-
-MeshNOW operates in a multi-threaded FreeRTOS environment to ensure low-latency packet forwarding and high responsive performance:
-
-| Task Name | Source File | Priority | Responsibility |
-|---|---|---|---|
-| `io_receive_task` | `receive/receiver.cpp` | `5` | Highest priority receiver loop. Pulls bytes from raw ESP-NOW driver, validates MAGIC prefix, and pushes to raw input queue. |
-| `send_worker_task` | `send/worker.cpp` | `5` | Core sender loop. Pulls packets from outgoing queue, resolves destination MAC, handles retries, and invokes ESP-NOW. |
-| `job_runner_task` | `job/runner.cpp` | `5` | Orchestrates periodic routines. Schedules keep-alive beacons, manages timeouts, processes incoming queues via `PacketHandler`. |
-
-### Synchronization & Safety
-Because tasks interact with shared structures (like the `Layout` tree representation and `state` status flags), MeshNOW uses recursive and regular mutexes:
-* **`lock::layout`** protects layout operations (adding/removing children, routing table entries).
-* **`lock::state`** protects the core state transitions to prevent race conditions during handshakes or disconnects.
-
----
-
-## 7. Build-Time Configurations (Kconfig Options)
+## 6. Build-Time Configurations (Kconfig Options)
 
 You can customize the mesh performance in your ESP-IDF project configuration (`menuconfig`) under the **MeshNOW** section.
 
@@ -320,82 +303,4 @@ You can customize the mesh performance in your ESP-IDF project configuration (`m
 
 ---
 
-## 8. Known Code Debt, Issues & How to Contribute
-
-If you are a junior developer tasked with extending or optimizing MeshNOW, here is where the current architectural pain points lie:
-
-1. **Broadcast Storm Risks:**
-   Broadcast frames have no Time-To-Live (TTL) or deduplication logic. In large networks, a loop or infinite forwarding storm could occur.
-   * *Contribution Opportunity:* Add a sequence ID and a traversed-nodes list inside packet headers to filter out already-received broadcasts.
-2. **Double-Free in RX Buffer:**
-   There is a known warning in `driver_free_rx_buffer()` (inside `netif.cpp`) regarding ownership of the Wi-Fi receive buffers.
-   * *Contribution Opportunity:* Audit memory leaks in the IP forwarding path.
-3. **Queue Bloating:**
-   `QUEUE_SIZE` is statically set to `128` inside `send::queue.cpp`. Under high traffic load, the send queue can saturate and reject packets.
-   * *Contribution Opportunity:* Make the queue dynamically sizable or implement an intelligent backpressure/congestion mechanism.
-4. **No Packet-Level Retransmission for Fragments:**
-   IP packet reassembly depends on all fragments arriving. If a single fragment is lost, the entire IP packet fails and times out after `CONFIG_FRAGMENT_TIMEOUT`.
-   * *Contribution Opportunity:* Implement simple sliding-window or ACK mechanisms for virtual fragments.
-
----
-
-## 9. Quick Code Cheat-Sheet for Junior Developers
-
-### How to Send a Custom Message
-You can transmit up to **230 bytes** of custom data to any node (or broadcast to all nodes):
-
-```c
-#include "meshnow.h"
-
-// 1. Broadcast message to all nodes
-uint8_t payload[] = "Hello MeshNOW!";
-meshnow_send(MESHNOW_BROADCAST_ADDRESS, payload, sizeof(payload));
-
-// 2. Direct message to the Root node
-meshnow_send(MESHNOW_ROOT_ADDRESS, payload, sizeof(payload));
-
-// 3. Direct message to a specific MAC
-meshnow_addr_t target_mac = {0x24, 0x0A, 0xC4, 0x12, 0x34, 0x56};
-meshnow_send(target_mac, payload, sizeof(payload));
-```
-
-### How to Receive Custom Messages
-Register a callback function to handle incoming application payloads:
-
-```c
-#include "meshnow.h"
-#include <esp_log.h>
-
-void my_data_handler(meshnow_addr_t src, uint8_t* buffer, size_t len) {
-    ESP_LOGI("APP", "Received %d bytes from %02X:%02X:%02X:%02X:%02X:%02X",
-             len, src[0], src[1], src[2], src[3], src[4], src[5]);
-}
-
-// Inside your initialization code:
-meshnow_data_cb_handle_t cb_handle;
-meshnow_register_data_cb(my_data_handler, &cb_handle);
-```
-
-### Writing a Custom Periodic Job
-If you need to perform periodic background tasks (e.g., polling a sensor and saving a health log), inherit from the template class `Job`:
-
-```cpp
-#include "job/job.hpp"
-#include <esp_log.h>
-
-class MySensorJob : public meshnow::job::Job {
-public:
-    MySensorJob() : Job(1000) {} // Run every 1000ms
-
-    void execute() override {
-        ESP_LOGI("SENSOR_JOB", "Reading telemetry...");
-        // Add your custom logic here!
-    }
-};
-
-// Registered in your job runner setup.
-```
-
----
-
-We hope this wiki helps you get up to speed with the **MeshNOW** codebase! Happy hacking!
+We hope this wiki helps you get up to speed with the **MeshNOW** codebase! 
