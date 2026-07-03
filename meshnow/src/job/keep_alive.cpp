@@ -50,12 +50,12 @@ void StatusSendJob::sendStatus() {
         packets::Status payload{
             .state = state,
             .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
-            #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+            #if CONFIG_USE_RTT_FOR_TIMEOUT
             //odd means seq
             .seq = child.rtt_seq | 1,
             #endif
         };
-        #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+        #if CONFIG_USE_RTT_FOR_TIMEOUT
         child.rtt_seq += 2;
         child.last_seen_rtt = xTaskGetTickCount();
         #endif
@@ -66,12 +66,12 @@ void StatusSendJob::sendStatus() {
         packets::Status payload{
             .state = state,
             .root = state == state::State::REACHES_ROOT ? std::make_optional(state::getRootMac()) : std::nullopt,
-            #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+            #if CONFIG_USE_RTT_FOR_TIMEOUT
             //odd means seq
             .seq = parent.rtt_seq | 1,
             #endif
         };
-        #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+        #if CONFIG_USE_RTT_FOR_TIMEOUT
         parent.rtt_seq += 2;
         parent.last_seen_rtt = xTaskGetTickCount();
         #endif
@@ -108,10 +108,10 @@ void UnreachableTimeoutJob::performAction() {
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
-
+            #if CONFIG_USE_CONNECT_END_MESSAGE
             // Send the ConnectEnd packet
             send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(parent_mac));
-
+            #endif
             layout.removeParent();
             state::setState(state::State::DISCONNECTED_FROM_PARENT);
         }
@@ -176,7 +176,7 @@ void NeighborCheckJob::performAction() {
 
     // direct children
     for (auto it = layout.getChildren().begin(); it != layout.getChildren().end();) {
-        #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+        #if CONFIG_USE_RTT_FOR_TIMEOUT
         auto timeout = it->rtt_est + 4*it->rtt_dev_est;
         #else
         auto timeout = KEEP_ALIVE_TIMEOUT;
@@ -193,7 +193,7 @@ void NeighborCheckJob::performAction() {
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_CHILD_DISCONNECTED,
                                &child_disconnected_event, sizeof(child_disconnected_event), portMAX_DELAY);
             }
-            #ifdef CONFIG_USE_CONNECT_END_MESSAGE
+            #if CONFIG_USE_CONNECT_END_MESSAGE
             send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(mac));
             #endif
 
@@ -208,7 +208,7 @@ void NeighborCheckJob::performAction() {
     // parent
     if (layout.hasParent()) {
         auto& parent = layout.getParent();
-        #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+        #if CONFIG_USE_RTT_FOR_TIMEOUT
         auto timeout = parent.rtt_est + 4*parent.rtt_dev_est;
         #else 
         auto timeout = KEEP_ALIVE_TIMEOUT;
@@ -225,7 +225,7 @@ void NeighborCheckJob::performAction() {
                 esp_event_post(MESHNOW_EVENT, meshnow_event_t::MESHNOW_EVENT_PARENT_DISCONNECTED,
                                &parent_disconnected_event, sizeof(parent_disconnected_event), portMAX_DELAY);
             }
-            #ifdef CONFIG_USE_CONNECT_END_MESSAGE
+            #if CONFIG_USE_CONNECT_END_MESSAGE
             // Send the ConnectEnd packet
             send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(parent.mac));
             #endif

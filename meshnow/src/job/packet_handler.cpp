@@ -176,7 +176,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
             }
         }
     }
-    #ifdef CONFIG_USE_RTT_FOR_TIMEOUT
+    #if CONFIG_USE_RTT_FOR_TIMEOUT
     auto* neigh = layout.hasChild(meta.from) ? &layout.getChild(meta.from) : 
                     layout.hasParent() && layout.getParent().mac == meta.from ? &layout.getParent() :
                     nullptr;
@@ -260,19 +260,23 @@ void PacketHandler::handle(const MetaData& meta, const packets::ConnectOk& p) {
     };
     event::Internal::fire(event::InternalEvent::GOT_CONNECT_RESPONSE, &data, sizeof(data));
 
-    #ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
+    #if CONFIG_USE_CONNECT_OK_ACK_MESSAGE
     //sends a response
     send::enqueuePayload(packets::ConnectOkAck{}, send::DirectOnce{meta.from});
     #endif
 }
 
-#ifdef CONFIG_USE_CONNECT_OK_ACK_MESSAGE
+#if CONFIG_USE_CONNECT_OK_ACK_MESSAGE
 void PacketHandler::handle(const MetaData& meta, const packets::ConnectOkAck& p) {
     if (!lastHopIsFrom(meta)) return;
     if (knowsNode(meta.from)) return;
     if (!reachesRoot() || !canAcceptNewChild()) {
+        #if CONFIG_USE_CONNECT_END_MESSAGE
         send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce{meta.from});
         ESP_LOGI(TAG, "Received connect acknowledge but cannot accept it anymore : send connect end");
+        #else
+        ESP_LOGI(TAG, "Received connect acknowledge but cannot accept it anymore : let the child time out");
+        #endif
         return;
     }
     add_child(meta);
@@ -330,7 +334,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::RootReachable& p
     // forward to all children
     send::enqueuePayload(packets::RootUnreachable{}, send::DownstreamRetry{});
 }
-#ifdef CONFIG_USE_CONNECT_END_MESSAGE
+#if CONFIG_USE_CONNECT_END_MESSAGE
 void PacketHandler::handle(const MetaData& meta, const packets::ConnectEnd&) {
     if (!lastHopIsFrom(meta)) return;
 
