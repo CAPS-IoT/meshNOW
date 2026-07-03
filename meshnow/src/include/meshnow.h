@@ -59,26 +59,6 @@ typedef enum {
  */
 typedef enum {
     /**
-     * The neighbor timed out
-     */
-    DISCONNECT_REASON_TIME_OUT,
-
-    /**
-     * The parent has no acces to the root since too long
-     */
-    DISCONNECT_REASON_ROOT_UNREACHABLE,
-
-    /**
-     * The neighbor sent a connect_end message
-     */
-    DISCONNECT_REASON_CONNECT_END_MESSAGE,
-} meshnow_event_disconnected_reason_t;
-
-/**
- * Reason for the disconnection
- */
-typedef enum {
-    /**
      * The neighbor timed out 
      */
     DISCONNECT_REASON_TIME_OUT,
