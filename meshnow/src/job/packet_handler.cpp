@@ -203,7 +203,7 @@ void PacketHandler::handle(const MetaData& meta, const packets::Status& p) {
         //same precaution here
         neigh->rtt_dev_est = ((neigh->rtt_dev_est * 3) + rtt_dev_sample)/4;
         neigh->rtt_dev_est = neigh->rtt_dev_est == 0 ? 1 : neigh->rtt_est;
-        ESP_LOGV(TAG, "new rtt sample %d, rtt estimate %d and rtt dev estimate %dcode ", rtt_sample, neigh->rtt_est, neigh->rtt_dev_est);
+        ESP_LOGV(TAG, "new rtt sample %lu, rtt estimate %lu and rtt dev estimate %lu", rtt_sample, neigh->rtt_est, neigh->rtt_dev_est);
     }
     return;
     #endif

@@ -28,26 +28,51 @@ typedef uint8_t meshnow_addr_t[MESHNOW_ADDRESS_LENGTH];
  * MeshNOW event types.
  */
 typedef enum {
-    /**
-     * A child has connected to this node.
-     */
-    MESHNOW_EVENT_CHILD_CONNECTED,
+  /**
+   * A child has connected to this node.
+   */
+  MESHNOW_EVENT_CHILD_CONNECTED,
 
-    /**
-     * A child has disconnected from this node.
-     */
-    MESHNOW_EVENT_CHILD_DISCONNECTED,
+  /**
+   * A child has disconnected from this node.
+   */
+  MESHNOW_EVENT_CHILD_DISCONNECTED,
 
-    /**
-     * This node has connected to a parent.
-     */
-    MESHNOW_EVENT_PARENT_CONNECTED,
+  /**
+   * This node has connected to a parent.
+   */
+  MESHNOW_EVENT_PARENT_CONNECTED,
 
-    /**
-     * This node has disconnected from a parent.
-     */
-    MESHNOW_EVENT_PARENT_DISCONNECTED,
+  /**
+   * This node has disconnected from a parent.
+   */
+  MESHNOW_EVENT_PARENT_DISCONNECTED,
+
+  /**
+   * This node received a search reply.
+   */
+  MESHNOW_EVENT_POTENTIAL_PARENT_FOUND
 } meshnow_event_t;
+
+/**
+ * Reason for the disconnection
+ */
+typedef enum {
+    /**
+     * The neighbor timed out
+     */
+    DISCONNECT_REASON_TIME_OUT,
+
+    /**
+     * The parent has no acces to the root since too long
+     */
+    DISCONNECT_REASON_ROOT_UNREACHABLE,
+
+    /**
+     * The neighbor sent a connect_end message
+     */
+    DISCONNECT_REASON_CONNECT_END_MESSAGE,
+} meshnow_event_disconnected_reason_t;
 
 /**
  * Reason for the disconnection
@@ -73,10 +98,10 @@ typedef enum {
  * Child connected information.
  */
 typedef struct {
-    /**
-     * MAC address of the connected child.
-     */
-    meshnow_addr_t child_mac;
+  /**
+   * MAC address of the connected child.
+   */
+  meshnow_addr_t child_mac;
 } meshnow_event_child_connected_t;
 
 /**
@@ -97,12 +122,11 @@ typedef struct {
  * Parent connected information.
  */
 typedef struct {
-    /**
-     * MAC address of the parent to which this node connected.
-     */
-    meshnow_addr_t parent_mac;
-    int parent_rssi;
-    
+  /**
+   * MAC address of the parent to which this node connected.
+   */
+  meshnow_addr_t parent_mac;
+  int parent_rssi;
 } meshnow_event_parent_connected_t;
 
 /**
@@ -120,33 +144,41 @@ typedef struct {
 } meshnow_event_parent_disconnected_t;
 
 /**
+ * Potential parent information.
+ */
+typedef struct {
+  meshnow_addr_t parent_mac;
+  int parent_rssi;
+} meshnow_event_potential_parent_found_t;
+
+/**
  * Configuration options for the root when connecting to a router.
  */
 typedef struct {
-    /**
-     * If true, the root node will try to connect to a router.
-     */
-    bool should_connect;
+  /**
+   * If true, the root node will try to connect to a router.
+   */
+  bool should_connect;
 
-    /**
-     * ESP Wi-Fi station configuration.
-     */
-    wifi_sta_config_t* sta_config;
+  /**
+   * ESP Wi-Fi station configuration.
+   */
+  wifi_sta_config_t* sta_config;
 } meshnow_router_config_t;
 
 /**
  * MeshNOW configuration.
  */
 typedef struct {
-    /**
-     * If true, this device is the root node of the mesh.
-     */
-    bool root;
+  /**
+   * If true, this device is the root node of the mesh.
+   */
+  bool root;
 
-    /**
-     * Router configuration for when `root` is true.
-     */
-    meshnow_router_config_t router_config;
+  /**
+   * Router configuration for when `root` is true.
+   */
+  meshnow_router_config_t router_config;
 } meshnow_config_t;
 
 /**
