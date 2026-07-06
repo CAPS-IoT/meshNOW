@@ -21,6 +21,7 @@ enum class InternalEvent : int32_t {
 struct StateChangedEvent {
     const state::State old_state;
     const state::State new_state;
+    const state::StateChangeReason reason;
 };
 
 struct ParentFoundData {

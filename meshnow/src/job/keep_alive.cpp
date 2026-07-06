@@ -113,7 +113,7 @@ void UnreachableTimeoutJob::performAction() {
             send::enqueuePayload(packets::ConnectEnd{}, send::DirectOnce(parent_mac));
             #endif
             layout.removeParent();
-            state::setState(state::State::DISCONNECTED_FROM_PARENT);
+            state::setState(state::State::DISCONNECTED_FROM_PARENT, state::StateChangeReason::ROOT_UNREACHABLE);
         }
     }
 }

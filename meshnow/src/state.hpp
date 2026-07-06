@@ -5,11 +5,12 @@
 namespace meshnow::state {
 
 enum class State : std::uint8_t { DISCONNECTED_FROM_PARENT, CONNECTED_TO_PARENT, REACHES_ROOT };
+enum class StateChangeReason : std::uint8_t { NO_REASON, ROOT_UNREACHABLE};
 
 /**
  * Sets the current state.
  */
-void setState(State state);
+void setState(State state, StateChangeReason reason = StateChangeReason::NO_REASON);
 
 /**
  * Returns the current state.

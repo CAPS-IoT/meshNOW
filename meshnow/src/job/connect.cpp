@@ -405,7 +405,11 @@ void ConnectJob::DonePhase::event_handler(meshnow::job::ConnectJob &job, event::
     ESP_LOGI(TAG, "new State: %d", static_cast<uint8_t>(state_change.new_state));
 
     if (state_change.new_state == state::State::DISCONNECTED_FROM_PARENT) {
-        job.phase_ = ReconnectPhase{current_parent_mac_};
+        if (state_change.reason == state::StateChangeReason::ROOT_UNREACHABLE) {
+            job.phase_ = SearchPhase{job.channel_config_};
+        } else {
+            job.phase_ = ReconnectPhase{current_parent_mac_};
+        }
     }
 }
 
