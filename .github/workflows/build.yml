@@ -1,0 +1,20 @@
+name: Build
+
+on:
+  pull_request:
+env:
+  ESP_IDF_VERSION: "v5.4.4"
+jobs:
+  build:
+    name: Build meshnow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build meshnow
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: ${{ env.ESP_IDF_VERSION }}
+          target: esp32
+          path: ci/build_meshnow
